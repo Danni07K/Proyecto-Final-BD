@@ -1,0 +1,74 @@
+{
+  "name": "ClassCraft - Jujutsu Kaisen RPG 3D",
+  "short_name": "ClassCraft",
+  "description": "Una aplicación educativa gamificada inspirada en Jujutsu Kaisen",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#7c3aed",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "es",
+  "categories": ["education", "games", "entertainment"],
+  "icons": [
+    {
+      "src": "/classcraft-logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/classcraft-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "Acceso rápido al dashboard",
+      "url": "/dashboard",
+      "icons": [
+        {
+          "src": "/classcraft-logo.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Misiones",
+      "short_name": "Misiones",
+      "description": "Ver misiones disponibles",
+      "url": "/misiones",
+      "icons": [
+        {
+          "src": "/classcraft-logo.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Tienda",
+      "short_name": "Tienda",
+      "description": "Acceder a la tienda",
+      "url": "/perfil/estudiante/tienda",
+      "icons": [
+        {
+          "src": "/classcraft-logo.png",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/classcraft.jpeg",
+      "sizes": "1280x720",
+      "type": "image/jpeg",
+      "form_factor": "wide",
+      "label": "Vista principal de ClassCraft"
+    }
+  ]
+} 

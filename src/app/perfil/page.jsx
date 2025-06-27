@@ -1,0 +1,41 @@
+'use client'
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { jwtDecode } from 'jwt-decode'
+
+export default function PerfilRedirect() {
+  const router = useRouter()
+
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    if (!token) {
+      router.push('/login')
+      return
+    }
+
+    try {
+      const decoded = jwtDecode(token)
+      const rol = decoded.rol
+      console.log('ROL DETECTADO EN PERFIL:', rol)
+
+      if (rol === 'profesor') {
+        router.push('/perfil/profesor')
+      } else if (rol === 'estudiante') {
+        router.push('/perfil/estudiante')
+      } else {
+        // Rol inválido, forzar logout
+        localStorage.removeItem('token')
+        router.push('/login')
+      }
+    } catch (err) {
+      console.error('Token inválido', err)
+      router.push('/login')
+    }
+  }, [router])
+
+  return (
+    <div className="flex items-center justify-center h-screen text-xl font-bold text-white">
+      Cargando tu perfil...
+    </div>
+  )
+}
