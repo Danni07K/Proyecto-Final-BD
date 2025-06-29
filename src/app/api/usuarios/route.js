@@ -1,5 +1,6 @@
 import { connectDB } from '@/lib/mongoose';
 import Usuario from '@/models/Usuario';
+import Clase from '@/models/Clase';
 
 export async function GET(req) {
   try {

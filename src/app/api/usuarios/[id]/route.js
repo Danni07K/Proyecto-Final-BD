@@ -6,7 +6,10 @@ export async function GET(req, { params }) {
     await connectDB()
     const token = req.headers.get('authorization')?.split(' ')[1]
     if (!token) return Response.json({ error: 'No autorizado' }, { status: 401 })
-    const usuario = await Usuario.findById(params.id).populate('clase')
+    
+    // Fix for Next.js 15: await params before using
+    const { id } = await params
+    const usuario = await Usuario.findById(id).populate('clase')
     if (!usuario) return Response.json({ error: 'Usuario no encontrado' }, { status: 404 })
     return Response.json({ usuario })
   } catch (error) {

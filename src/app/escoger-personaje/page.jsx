@@ -12,6 +12,7 @@ export default function EscogerPersonaje() {
 
   const handleCharacterSelect = (character) => {
     setSelectedCharacter(character)
+    toast.success(`¡Has seleccionado a ${character.name}!`)
   }
 
   const confirmarSeleccion = async () => {
@@ -58,78 +59,79 @@ export default function EscogerPersonaje() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-purple-950 to-black text-white">
-      {/* Header con efectos */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-center pt-8 pb-6"
-      >
-        <h1 className="text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 mb-4 drop-shadow-2xl">
-          SELECCIONA TU PERSONAJE
-        </h1>
-        <p className="text-xl text-purple-300 max-w-2xl mx-auto">
-          Elige tu destino como hechicero y domina las técnicas de Jujutsu Kaisen
-        </p>
-      </motion.div>
-
-      {/* Selector 3D de personajes */}
-      <div className="max-w-7xl mx-auto px-6">
-        <CharacterSelector3D onCharacterSelect={handleCharacterSelect} />
-      </div>
-
-      {/* Panel de confirmación */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-center mt-8 pb-8"
-      >
-        {selectedCharacter ? (
-          <div className="space-y-4">
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className="inline-block bg-purple-600/20 backdrop-blur-sm rounded-xl p-4 border border-purple-500"
-            >
-              <p className="text-lg text-purple-300">
-                Has seleccionado: <span className="text-white font-bold">{selectedCharacter.name}</span>
-              </p>
-              <p className="text-sm text-gray-400">{selectedCharacter.description}</p>
-            </motion.div>
-            
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={confirmarSeleccion}
-              disabled={isConfirming}
-              className="px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-full text-xl font-bold shadow-2xl transition-all duration-300 disabled:opacity-50"
-            >
-              {isConfirming ? 'Confirmando...' : `¡Elegir a ${selectedCharacter.name}!`}
-            </motion.button>
-          </div>
-        ) : (
-          <div className="text-center">
-            <p className="text-purple-300 text-lg">
-              🖱️ Usa el mouse para explorar los personajes • 🖱️ Click para seleccionar
-            </p>
-          </div>
-        )}
-
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          onClick={() => router.back()}
-          className="mt-6 text-sm text-gray-400 hover:text-white underline transition-colors"
+    <div className="fixed inset-0 overflow-hidden">
+      {/* Character Selector 3D - Full Screen */}
+      <CharacterSelector3D onCharacterSelect={handleCharacterSelect} />
+      
+      {/* Floating Confirmation Panel */}
+      {selectedCharacter && (
+        <motion.div
+          initial={{ opacity: 0, y: 50 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-20"
         >
-          ← Volver
-        </motion.button>
-      </motion.div>
+          <div className="bg-black/60 backdrop-blur-md rounded-2xl p-6 border border-white/20 shadow-2xl">
+            <div className="text-center space-y-4">
+              <div>
+                <h3 className="text-xl font-bold text-white mb-2">
+                  Personaje Seleccionado
+                </h3>
+                <p className="text-lg text-purple-300">
+                  <span className="text-white font-bold">{selectedCharacter.name}</span>
+                </p>
+                <p className="text-sm text-gray-400 mt-1">
+                  {selectedCharacter.description}
+                </p>
+              </div>
+              
+              <div className="flex space-x-4">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={confirmarSeleccion}
+                  disabled={isConfirming}
+                  className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-lg font-bold shadow-lg transition-all duration-300 disabled:opacity-50"
+                >
+                  {isConfirming ? 'Confirmando...' : 'Confirmar Selección'}
+                </motion.button>
+                
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setSelectedCharacter(null)}
+                  className="px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg font-bold transition-all duration-300"
+                >
+                  Cancelar
+                </motion.button>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
-      {/* Efectos de fondo */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute top-3/4 right-1/4 w-24 h-24 bg-pink-500/10 rounded-full blur-2xl animate-pulse delay-1000"></div>
-        <div className="absolute bottom-1/4 left-1/3 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl animate-pulse delay-2000"></div>
-      </div>
+      {/* Back Button */}
+      <motion.button
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        whileHover={{ scale: 1.05 }}
+        onClick={() => router.back()}
+        className="absolute top-6 left-6 z-20 px-4 py-2 bg-black/40 backdrop-blur-md rounded-lg text-white hover:bg-black/60 transition-all duration-300 border border-white/20"
+      >
+        ← Volver
+      </motion.button>
+
+      {/* Instructions */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1 }}
+        className="absolute top-6 right-6 z-20 bg-black/40 backdrop-blur-md rounded-lg p-4 text-white text-sm border border-white/20"
+      >
+        <p className="font-semibold mb-2">🎮 Controles:</p>
+        <p>🖱️ Arrastra para rotar</p>
+        <p>🔍 Rueda para zoom</p>
+        <p>👆 Click para seleccionar</p>
+      </motion.div>
     </div>
   )
 }
