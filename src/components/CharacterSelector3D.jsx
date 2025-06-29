@@ -1,252 +1,174 @@
 'use client'
-import { useState, useRef, useEffect } from 'react'
-import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { OrbitControls, useGLTF, Environment, Html, Text, Float, PresentationControls } from '@react-three/drei'
+import { useState, useRef } from 'react'
 import { motion } from 'framer-motion'
-import * as THREE from 'three'
 
-// Componente para el personaje 3D
-function CharacterModel({ character, isSelected, onSelect, position }) {
-  const meshRef = useRef()
-  const [hovered, setHovered] = useState(false)
-  
-  // Animación de flotación
-  useFrame((state) => {
-    if (meshRef.current) {
-      meshRef.current.position.y = position[1] + Math.sin(state.clock.elapsedTime * 2) * 0.1
-      meshRef.current.rotation.y = state.clock.elapsedTime * 0.5
-    }
-  })
-
-  // Efecto de hover
-  useEffect(() => {
-    if (meshRef.current) {
-      if (hovered || isSelected) {
-        meshRef.current.scale.setScalar(1.1)
-      } else {
-        meshRef.current.scale.setScalar(1)
-      }
-    }
-  }, [hovered, isSelected])
-
-  const handleClick = () => {
-    onSelect(character)
+const CHARACTERS = [
+  {
+    id: 'gojo',
+    name: 'Satoru Gojo',
+    image: '/avatars/avatar-gojo.png',
+    description: 'El hechicero más fuerte, maestro del infinito.',
+    ability: 'Limitless',
+    abilityDesc: 'Manipula el espacio a su alrededor para defender y atacar.'
+  },
+  {
+    id: 'yuji',
+    name: 'Yuji Itadori',
+    image: '/avatars/avatar-itadori.png',
+    description: 'Portador de Sukuna, gran fuerza física.',
+    ability: 'Divergencia',
+    abilityDesc: 'Golpes dobles y energía maldita.'
+  },
+  {
+    id: 'megumi',
+    name: 'Megumi Fushiguro',
+    image: '/avatars/avatar-megumi.png',
+    description: 'Invocador de shikigamis de sombra.',
+    ability: 'Diez Sombras',
+    abilityDesc: 'Invoca bestias de sombra para atacar y defender.'
+  },
+  {
+    id: 'nobara',
+    name: 'Nobara Kugisaki',
+    image: '/avatars/avatar-nobara.png',
+    description: 'Hechicera de clavos y muñecos.',
+    ability: 'Resonancia',
+    abilityDesc: 'Daña a sus enemigos a distancia con muñecos y clavos.'
+  },
+  {
+    id: 'yuta',
+    name: 'Yuta Okkotsu',
+    image: '/avatars/avatar-yuta.png',
+    description: 'Portador de Rika, energía maldita inmensa.',
+    ability: 'Rika',
+    abilityDesc: 'Invoca a Rika para ataques devastadores.'
+  },
+  {
+    id: 'nanami',
+    name: 'Kento Nanami',
+    image: '/avatars/avatar-nanami.png',
+    description: 'Hechicero de grado 1, preciso y calculador.',
+    ability: 'Ratio Technique',
+    abilityDesc: 'Divide a sus enemigos y ataca puntos débiles.'
   }
+]
 
-  return (
-    <group
-      ref={meshRef}
-      position={position}
-      onPointerOver={() => setHovered(true)}
-      onPointerOut={() => setHovered(false)}
-      onClick={handleClick}
-    >
-      {/* Modelo 3D del personaje */}
-      <primitive 
-        object={character.model} 
-        scale={character.scale || 1.5}
-        position={[0, -1, 0]}
-      />
-      
-      {/* Efecto de selección */}
-      {isSelected && (
-        <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
-          <Html position={[0, 3, 0]} center>
-            <div className="bg-purple-600/90 backdrop-blur-sm px-4 py-2 rounded-lg border border-purple-400">
-              <p className="text-white font-bold text-sm">✓ SELECCIONADO</p>
-            </div>
-          </Html>
-        </Float>
-      )}
-      
-      {/* Nombre del personaje */}
-      <Html position={[0, -2.5, 0]} center>
-        <div className="text-center">
-          <p className="text-white font-bold text-lg drop-shadow-lg">{character.name}</p>
-          <p className="text-purple-300 text-sm">{character.type}</p>
-        </div>
-      </Html>
-      
-      {/* Aura de energía */}
-      {(hovered || isSelected) && (
-        <mesh position={[0, 0, 0]}>
-          <sphereGeometry args={[2, 32, 32]} />
-          <meshBasicMaterial 
-            color={character.auraColor || '#8b5cf6'} 
-            transparent 
-            opacity={0.1}
-            wireframe
-          />
-        </mesh>
-      )}
-    </group>
-  )
-}
-
-// Componente principal del selector
 export default function CharacterSelector3D({ onCharacterSelect }) {
-  const [selectedCharacter, setSelectedCharacter] = useState(null)
-  const [characters, setCharacters] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [cameraMode, setCameraMode] = useState('orbit') // orbit, free, cinematic
+  const [selected, setSelected] = useState(CHARACTERS[0])
+  const [rotation, setRotation] = useState({ x: 0, y: 0 })
+  const cardRef = useRef(null)
 
-  // Configuración de personajes
-  const characterConfigs = [
-    {
-      id: 'gojo',
-      name: 'Satoru Gojo',
-      type: 'Hechicero Especial',
-      model: null,
-      scale: 2.2,
-      auraColor: '#3b82f6',
-      description: 'El hechicero más poderoso con la técnica del Infinito',
-      stats: { poder: 100, velocidad: 95, resistencia: 90 }
-    },
-    {
-      id: 'yuji',
-      name: 'Yuji Itadori',
-      type: 'Hechicero Novato',
-      model: null,
-      scale: 1.8,
-      auraColor: '#ef4444',
-      description: 'Estudiante con potencial excepcional',
-      stats: { poder: 85, velocidad: 90, resistencia: 95 }
-    },
-    {
-      id: 'megumi',
-      name: 'Megumi Fushiguro',
-      type: 'Hechicero de Sombras',
-      model: null,
-      scale: 1.9,
-      auraColor: '#1f2937',
-      description: 'Maestro de las técnicas de sombra',
-      stats: { poder: 80, velocidad: 85, resistencia: 85 }
-    },
-    {
-      id: 'nobara',
-      name: 'Nobara Kugisaki',
-      type: 'Hechicera de Clavos',
-      model: null,
-      scale: 1.7,
-      auraColor: '#ec4899',
-      description: 'Especialista en técnicas de maldición',
-      stats: { poder: 75, velocidad: 80, resistencia: 80 }
-    }
-  ]
-
-  // Cargar modelos 3D
-  useEffect(() => {
-    const loadModels = async () => {
-      try {
-        // Por ahora usaremos modelos placeholder, pero aquí cargarías los modelos reales
-        const loadedCharacters = characterConfigs.map(char => ({
-          ...char,
-          model: new THREE.Group() // Placeholder - aquí cargarías el modelo real
-        }))
-        
-        setCharacters(loadedCharacters)
-        setLoading(false)
-      } catch (error) {
-        console.error('Error cargando modelos:', error)
-        setLoading(false)
-      }
-    }
-
-    loadModels()
-  }, [])
-
-  const handleCharacterSelect = (character) => {
-    setSelectedCharacter(character)
-    onCharacterSelect(character)
+  // Rotación 3D simulada con el mouse
+  const handleMouseMove = (e) => {
+    const rect = cardRef.current.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+    const centerX = rect.width / 2
+    const centerY = rect.height / 2
+    const rotateY = ((x - centerX) / centerX) * 18 // grados
+    const rotateX = -((y - centerY) / centerY) * 18
+    setRotation({ x: rotateX, y: rotateY })
   }
-
-  if (loading) {
-    return (
-      <div className="w-full h-[600px] flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-purple-500 mx-auto mb-4"></div>
-          <p className="text-white text-lg">Cargando personajes...</p>
-        </div>
-      </div>
-    )
-  }
+  const handleMouseLeave = () => setRotation({ x: 0, y: 0 })
 
   return (
-    <div className="w-full h-[600px] relative">
-      <Canvas camera={{ position: [0, 2, 8], fov: 60 }}>
-        <ambientLight intensity={0.6} />
-        <directionalLight position={[5, 5, 5]} intensity={1} />
-        <pointLight position={[-5, 5, -5]} intensity={0.5} color="#8b5cf6" />
-        <pointLight position={[5, -5, 5]} intensity={0.3} color="#fbbf24" />
-        
-        <Environment preset="night" />
-        
-        <PresentationControls
-          global
-          rotation={[0, -Math.PI / 4, 0]}
-          polar={[-Math.PI / 4, Math.PI / 4]}
-          azimuth={[-Math.PI / 4, Math.PI / 4]}
-        >
-          {/* Personajes en círculo */}
-          {characters.map((character, index) => {
-            const angle = (index / characters.length) * Math.PI * 2
-            const radius = 4
-            const x = Math.cos(angle) * radius
-            const z = Math.sin(angle) * radius
-            
-            return (
-              <CharacterModel
-                key={character.id}
-                character={character}
-                isSelected={selectedCharacter?.id === character.id}
-                onSelect={handleCharacterSelect}
-                position={[x, 0, z]}
-              />
-            )
-          })}
-        </PresentationControls>
-      </Canvas>
+    <div className="relative w-full h-[600px] flex rounded-3xl overflow-hidden shadow-2xl bg-gradient-to-br from-black via-purple-950 to-black">
+      {/* Fondo partículas y energía */}
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        {[...Array(18)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute rounded-full bg-purple-400/10 blur-2xl"
+            style={{
+              width: `${40 + Math.random() * 80}px`,
+              height: `${40 + Math.random() * 80}px`,
+              left: `${Math.random() * 95}%`,
+              top: `${Math.random() * 95}%`,
+            }}
+            animate={{
+              opacity: [0.3, 0.7, 0.3],
+              scale: [1, 1.2, 1],
+              y: [0, Math.random() * 40 - 20, 0],
+              x: [0, Math.random() * 40 - 20, 0],
+            }}
+            transition={{ duration: 6 + Math.random() * 4, repeat: Infinity, delay: i * 0.2 }}
+          />
+        ))}
+      </div>
 
-      {/* Panel de información del personaje seleccionado */}
-      {selectedCharacter && (
+      {/* Columna izquierda: personajes */}
+      <div className="z-10 w-1/5 min-w-[120px] max-w-[160px] bg-black/40 flex flex-col items-center py-6 gap-2 border-r border-purple-900 overflow-y-auto scrollbar-thin scrollbar-thumb-purple-700/40 scrollbar-track-transparent">
+        {CHARACTERS.map((char) => (
+          <button
+            key={char.id}
+            className={`group flex flex-col items-center w-full py-2 px-1 rounded-xl transition-all duration-200 border-2 ${selected.id === char.id ? 'border-purple-400 bg-purple-900/60 shadow-lg scale-105' : 'border-transparent hover:border-purple-700 hover:bg-purple-900/30'}`}
+            onClick={() => setSelected(char)}
+          >
+            <img src={char.image} alt={char.name} className="w-14 h-14 rounded-lg object-cover group-hover:scale-110 transition-transform duration-200" />
+            <div className="text-xs text-white mt-1 font-bold text-center drop-shadow-lg whitespace-nowrap">{char.name}</div>
+          </button>
+        ))}
+      </div>
+
+      {/* Centro: personaje grande */}
+      <div className="z-10 w-3/5 flex flex-col items-center justify-center relative">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="absolute bottom-4 left-4 right-4 bg-black/80 backdrop-blur-sm rounded-xl p-6 border border-purple-600"
+          ref={cardRef}
+          className="relative w-80 h-[420px] bg-gradient-to-br from-purple-700/60 to-blue-900/60 rounded-3xl shadow-2xl flex flex-col items-center justify-end border-4 border-purple-500/30 mt-6 mb-2"
+          style={{
+            perspective: '1200px',
+            transformStyle: 'preserve-3d',
+            boxShadow: '0 0 80px 10px #a78bfa44',
+            transition: 'box-shadow 0.3s'
+          }}
+          animate={{
+            rotateX: rotation.x,
+            rotateY: rotation.y
+          }}
+          onMouseMove={handleMouseMove}
+          onMouseLeave={handleMouseLeave}
         >
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-2xl font-bold text-white">{selectedCharacter.name}</h3>
-              <p className="text-purple-300">{selectedCharacter.type}</p>
-              <p className="text-gray-400 text-sm mt-2">{selectedCharacter.description}</p>
-            </div>
-            
-            <div className="text-right">
-              <div className="grid grid-cols-3 gap-4">
-                <div className="text-center">
-                  <p className="text-red-400 font-bold">{selectedCharacter.stats.poder}</p>
-                  <p className="text-xs text-gray-400">PODER</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-blue-400 font-bold">{selectedCharacter.stats.velocidad}</p>
-                  <p className="text-xs text-gray-400">VELOCIDAD</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-green-400 font-bold">{selectedCharacter.stats.resistencia}</p>
-                  <p className="text-xs text-gray-400">RESISTENCIA</p>
-                </div>
-              </div>
-            </div>
+          {/* Efecto de aura */}
+          <motion.div
+            className="absolute -top-12 left-1/2 -translate-x-1/2 w-72 h-72 rounded-full bg-purple-400/20 blur-2xl z-0"
+            animate={{ scale: [1, 1.1, 1], opacity: [0.7, 1, 0.7] }}
+            transition={{ duration: 3, repeat: Infinity }}
+          />
+          {/* Imagen grande */}
+          <img
+            src={selected.image}
+            alt={selected.name}
+            className="relative z-10 w-56 h-56 object-cover rounded-2xl border-4 border-white/20 shadow-xl mb-4 mt-8 select-none pointer-events-none"
+            draggable={false}
+          />
+          {/* Nombre */}
+          <div className="z-10 text-3xl font-extrabold text-white drop-shadow-lg mb-4 text-center">
+            {selected.name}
           </div>
         </motion.div>
-      )}
+        {/* Botón de seleccionar */}
+        <button
+          onClick={() => onCharacterSelect && onCharacterSelect(selected)}
+          className="mt-4 px-10 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold rounded-full shadow-lg hover:from-purple-700 hover:to-blue-700 transition-all text-lg"
+        >
+          Seleccionar
+        </button>
+      </div>
 
-      {/* Instrucciones */}
-      <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-sm rounded-lg p-3 border border-purple-500">
-        <p className="text-white text-sm">
-          🖱️ Arrastra para rotar • 🖱️ Click para seleccionar • ⌨️ Zoom con rueda
-        </p>
+      {/* Derecha: detalles y habilidades */}
+      <div className="z-10 w-1/4 min-w-[220px] bg-black/30 flex flex-col justify-center px-8 border-l border-purple-900">
+        <div className="text-lg text-purple-300 font-bold mb-2">Habilidad</div>
+        <div className="text-2xl text-white font-extrabold mb-2">{selected.ability}</div>
+        <div className="text-white/80 mb-4">{selected.abilityDesc}</div>
+        <div className="text-purple-200 text-sm mb-2">Descripción</div>
+        <div className="text-white/90 text-base mb-4">{selected.description}</div>
+        <button
+          className="mt-2 px-6 py-2 bg-gradient-to-r from-purple-700 to-blue-700 text-white rounded-lg font-semibold shadow hover:from-purple-800 hover:to-blue-800 transition-all"
+          disabled
+        >
+          Subir de nivel (próximamente)
+        </button>
       </div>
     </div>
   )
-} 
+}

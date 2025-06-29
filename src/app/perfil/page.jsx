@@ -29,13 +29,17 @@ export default function PerfilRedirect() {
       }
     } catch (err) {
       console.error('Token inválido', err)
+      localStorage.removeItem('token')
       router.push('/login')
     }
   }, [router])
 
   return (
-    <div className="flex items-center justify-center h-screen text-xl font-bold text-white">
-      Cargando tu perfil...
+    <div className="min-h-screen bg-gradient-to-br from-black via-purple-950 to-black flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-purple-500 mx-auto mb-4"></div>
+        <p className="text-white text-xl font-bold">Cargando tu perfil...</p>
+      </div>
     </div>
   )
 }

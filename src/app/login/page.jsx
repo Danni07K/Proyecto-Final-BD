@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { useAuth } from '@/hooks/useClient'
 import { toast } from 'react-hot-toast'
 import Link from 'next/link'
+import { jwtDecode } from 'jwt-decode'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -42,6 +43,26 @@ export default function LoginPage() {
       return () => window.removeEventListener('resize', handleResize)
     }
   }, [])
+
+  useEffect(() => {
+    // Verificar si ya hay un token válido
+    const token = localStorage.getItem('token')
+    if (token) {
+      try {
+        const payload = jwtDecode(token)
+        const rol = payload.rol
+        
+        if (rol === 'profesor') {
+          router.push('/perfil/profesor')
+        } else if (rol === 'estudiante') {
+          router.push('/perfil/estudiante')
+        }
+      } catch (err) {
+        // Token inválido, continuar con el login
+        localStorage.removeItem('token')
+      }
+    }
+  }, [router])
 
   const handleChange = e => {
     const { name, value } = e.target
@@ -88,7 +109,7 @@ export default function LoginPage() {
           if (token) {
             localStorage.setItem('token', token)
             try {
-              const payload = JSON.parse(atob(token.split('.')[1]))
+              const payload = jwtDecode(token)
               console.log('TOKEN LOGIN:', token)
               console.log('ROL EN LOGIN:', payload.rol)
               if (payload.rol === 'profesor') {

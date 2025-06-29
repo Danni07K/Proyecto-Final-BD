@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {
-  throw new Error('MONGODB_URI=mongodb://127.0.0.1:27017/classcraft');
+  throw new Error('MONGODB_URI environment variable is required. Please set it to your MongoDB connection string.');
 }
 
 let cached = global.mongoose;

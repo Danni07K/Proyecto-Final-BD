@@ -1,307 +1,243 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { toast } from 'react-hot-toast'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
+import { jwtDecode } from 'jwt-decode'
 import Shop3D from '@/components/Shop3D'
 
-export default function TiendaPage() {
-  const [accesorios, setAccesorios] = useState({})
-  const [usuario, setUsuario] = useState(null)
-  const [cargando, setCargando] = useState(false)
-  const [audioEnabled, setAudioEnabled] = useState(false)
-  const [viewMode, setViewMode] = useState('3d') // 3d, grid
+const personajesJJK = [
+  { id: 'gojo', nombre: 'Satoru Gojo', avatar: '/avatars/avatar-gojo.png', descripcion: 'El más fuerte de todos los hechiceros', auraColor: '#3b82f6' },
+  { id: 'yuji', nombre: 'Yuji Itadori', avatar: '/avatars/avatar-itadori.png', descripcion: 'Estudiante con potencial excepcional', auraColor: '#ef4444' },
+  { id: 'megumi', nombre: 'Megumi Fushiguro', avatar: '/avatars/avatar-megumi.png', descripcion: 'Maestro de las sombras', auraColor: '#1f2937' },
+  { id: 'nobara', nombre: 'Nobara Kugisaki', avatar: '/avatars/avatar-nobara.png', descripcion: 'Especialista en maldiciones', auraColor: '#ec4899' },
+  { id: 'yuta', nombre: 'Yuta Okkotsu', avatar: '/avatars/avatar-yuta.png', descripcion: 'El sucesor de Gojo', auraColor: '#10b981' },
+  { id: 'nanami', nombre: 'Kento Nanami', avatar: '/avatars/avatar-nanami.png', descripcion: 'Hechicero experimentado', auraColor: '#f59e0b' },
+]
+
+export default function TiendaEstudiante() {
+  const [user, setUser] = useState(null)
+  const [personajeSeleccionado, setPersonajeSeleccionado] = useState(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState(null)
   const router = useRouter()
 
   useEffect(() => {
-    cargarDatos()
-  }, [])
-
-  const cargarDatos = async () => {
-    const token = localStorage.getItem('token')
-    if (!token) {
-      router.push('/login')
-      return
+    const cargarUsuario = async () => {
+      try {
+        const token = localStorage.getItem('token')
+        if (!token) {
+          router.push('/login')
+          return
+        }
+        
+        const payload = jwtDecode(token)
+        
+        const res = await fetch(`/api/usuarios/${payload.id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        if (!res.ok) {
+          throw new Error('Error al cargar usuario')
+        }
+        
+        const data = await res.json()
+        setUser(data.usuario)
+        
+        // Configurar personaje seleccionado
+        if (data.usuario.personaje) {
+          const personaje = personajesJJK.find(p => p.id === data.usuario.personaje.nombre?.toLowerCase())
+          if (personaje) {
+            setPersonajeSeleccionado(personaje)
+          }
+        }
+      } catch (err) {
+        console.error('Error al cargar usuario:', err)
+        setError('Error al cargar el perfil')
+        router.push('/login')
+      } finally {
+        setIsLoading(false)
+      }
     }
-
-    try {
-      // Cargar catálogo de accesorios
-      const accesoriosRes = await fetch('/api/usuarios/comprar-accesorio')
-      if (!accesoriosRes.ok) throw new Error('Error al cargar accesorios')
-      const accesoriosData = await accesoriosRes.json()
-      setAccesorios(accesoriosData.accesorios)
-
-      // Cargar datos del usuario
-      const payload = JSON.parse(atob(token.split('.')[1]))
-      const usuarioRes = await fetch(`/api/usuarios/${payload.id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      if (!usuarioRes.ok) throw new Error('Error al cargar usuario')
-      const usuarioData = await usuarioRes.json()
-      setUsuario(usuarioData.usuario)
-    } catch (error) {
-      console.error('Error al cargar datos:', error)
-      toast.error('Error al cargar la tienda')
-    }
-  }
-
-  const reproducirSonido = () => {
-    if (!audioEnabled) return
     
+    cargarUsuario()
+  }, [router])
+
+  const handleBuyAccessory = async (accessory) => {
     try {
-      const audio = new Audio('/sounds/energia-maldita.mp3')
-      audio.volume = 0.6
-      audio.play().catch(err => {
-        console.log('Audio no pudo reproducirse:', err)
-      })
-    } catch (error) {
-      console.log('Error al reproducir audio:', error)
-    }
-  }
-
-  const habilitarAudio = () => {
-    setAudioEnabled(true)
-    // Reproducir un sonido silencioso para activar el audio
-    const audio = new Audio()
-    audio.play().then(() => {
-      toast.success('🔊 Audio habilitado')
-    }).catch(() => {
-      toast.error('❌ No se pudo habilitar el audio')
-    })
-  }
-
-  const comprarAccesorio = async (accesorio) => {
-    setCargando(true)
-    reproducirSonido()
-
-    const token = localStorage.getItem('token')
-
-    try {
+      const token = localStorage.getItem('token')
       const res = await fetch('/api/usuarios/comprar-accesorio', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ accesorioId: accesorio.id })
+        body: JSON.stringify({
+          accesorioId: accessory.id,
+          precio: accessory.precio
+        })
       })
 
-      const data = await res.json()
-
       if (res.ok) {
-        toast.success(data.mensaje)
-        
-        if (data.subioNivel) {
-          toast.success(`🎉 ¡Subiste al nivel ${data.nuevoNivel}!`)
-        }
-
-        // Actualizar datos del usuario
-        setUsuario(prev => ({
+        // Actualizar monedas del usuario
+        setUser(prev => ({
           ...prev,
-          monedas: data.monedasRestantes,
-          accesoriosComprados: [...prev.accesoriosComprados, accesorio.id],
-          nivel: data.nuevoNivel,
-          experiencia: data.experiencia
+          monedas: prev.monedas - accessory.precio
         }))
+        
+        // Mostrar mensaje de éxito
+        alert(`¡${accessory.nombre} comprado exitosamente!`)
       } else {
-        toast.error(data.error)
+        const error = await res.json()
+        alert(error.error || 'Error al comprar el accesorio')
       }
     } catch (error) {
-      toast.error('Error al comprar accesorio')
-    } finally {
-      setCargando(false)
+      console.error('Error al comprar accesorio:', error)
+      alert('Error al procesar la compra')
     }
   }
 
-  const getColorRareza = (rareza) => {
-    switch (rareza) {
-      case 'legendario': return 'text-yellow-400 border-yellow-500'
-      case 'epico': return 'text-purple-400 border-purple-500'
-      case 'raro': return 'text-blue-400 border-blue-500'
-      case 'comun': return 'text-gray-400 border-gray-500'
-      default: return 'text-gray-400 border-gray-500'
-    }
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-black via-purple-950 to-black flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center"
+        >
+          <div className="relative">
+            <div className="w-20 h-20 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
+            <div className="absolute inset-0 w-20 h-20 border-4 border-yellow-500 border-b-transparent rounded-full animate-spin mx-auto" 
+                 style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
+          </div>
+          <motion.p 
+            className="text-white text-xl font-bold text-gradient"
+            animate={{ opacity: [0.5, 1, 0.5] }}
+            transition={{ duration: 2, repeat: Infinity }}
+          >
+            Cargando Tienda...
+          </motion.p>
+        </motion.div>
+      </div>
+    )
   }
 
-  const getIconoRareza = (rareza) => {
-    switch (rareza) {
-      case 'legendario': return '🌟'
-      case 'epico': return '💫'
-      case 'raro': return '⭐'
-      case 'comun': return '⚪'
-      default: return '⚪'
-    }
-  }
-
-  const yaTieneAccesorio = (accesorioId) => {
-    return usuario?.accesoriosComprados?.includes(accesorioId)
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-black via-purple-950 to-black flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="text-center"
+        >
+          <div className="text-6xl mb-4">⚠️</div>
+          <p className="text-white text-lg font-bold text-red-400 mb-4">{error}</p>
+          <button
+            onClick={() => router.push('/perfil/estudiante')}
+            className="bg-gradient-to-r from-purple-600 to-purple-800 hover:from-purple-700 hover:to-purple-900 text-white px-6 py-3 rounded-lg font-bold transition-all duration-300 btn-jjk"
+          >
+            Volver al Perfil
+          </button>
+        </motion.div>
+      </div>
+    )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-purple-950 to-black text-white">
-      {/* Header con efectos de energía maldita */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-center pt-8 pb-6"
-      >
-        <h1 className="text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-400 mb-4 drop-shadow-2xl">
-          🛍️ TIENDA DE ACCESORIOS 3D 🛍️
-        </h1>
-        <p className="text-xl text-purple-300 mb-4">
-          Explora y adquiere poder con los accesorios de los hechiceros
-        </p>
-        
-        {/* Controles de vista */}
-        <div className="flex justify-center space-x-4 mb-6">
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setViewMode('3d')}
-            className={`px-6 py-3 rounded-lg font-bold transition-all ${
-              viewMode === '3d' 
-                ? 'bg-purple-600 text-white shadow-lg' 
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-            }`}
-          >
-            🎮 Vista 3D
-          </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setViewMode('grid')}
-            className={`px-6 py-3 rounded-lg font-bold transition-all ${
-              viewMode === 'grid' 
-                ? 'bg-purple-600 text-white shadow-lg' 
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-            }`}
-          >
-            📱 Vista Grid
-          </motion.button>
-        </div>
-        
-        {/* Botón para habilitar audio */}
-        {!audioEnabled && (
-          <motion.button
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            onClick={habilitarAudio}
-            className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-bold transition-all"
-          >
-            🔊 Habilitar Efectos de Sonido
-          </motion.button>
-        )}
-      </motion.div>
-
-      {/* Contenido principal */}
-      {viewMode === '3d' ? (
-        // Vista 3D
-        <div className="max-w-7xl mx-auto px-6">
-          <Shop3D 
-            accesorios={accesorios} 
-            usuario={usuario} 
-            onBuyAccessory={comprarAccesorio}
+    <div className="min-h-screen bg-gradient-to-br from-black via-purple-950 to-black text-white relative overflow-hidden">
+      {/* Partículas de energía maldita */}
+      <div className="absolute inset-0 pointer-events-none">
+        {[...Array(30)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute w-1 h-1 bg-purple-400 rounded-full"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+            }}
+            animate={{
+              y: [0, -100, 0],
+              opacity: [0, 1, 0],
+            }}
+            transition={{
+              duration: Math.random() * 3 + 2,
+              repeat: Infinity,
+              delay: Math.random() * 2,
+            }}
           />
-        </div>
-      ) : (
-        // Vista Grid tradicional
-        <div className="max-w-6xl mx-auto px-6">
-          {/* Panel de Usuario */}
-          {usuario && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mb-8 bg-gray-900/80 backdrop-blur-sm rounded-xl p-6 border border-purple-600 shadow-2xl"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <img
-                    src={usuario.personaje?.avatar || '/avatars/avatar-gojo.png'}
-                    alt="Avatar"
-                    className="w-16 h-16 rounded-full border-2 border-purple-500"
-                  />
-                  <div>
-                    <h2 className="text-2xl font-bold">{usuario.nombre}</h2>
-                    <p className="text-purple-300">{usuario.personaje?.nombre}</p>
-                    <p className="text-sm text-gray-400">Nivel {usuario.nivel} • {usuario.experiencia} XP</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="bg-yellow-900/30 p-4 rounded-lg border border-yellow-500">
-                    <p className="text-3xl font-bold text-yellow-400">{usuario.monedas}</p>
-                    <p className="text-sm text-gray-400">Monedas</p>
-                  </div>
+        ))}
+      </div>
+
+      <div className="relative z-10 p-6">
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <motion.div
+            initial={{ y: -50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className="text-center mb-8"
+          >
+            <h1 className="text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-yellow-400 mb-4 drop-shadow-2xl">
+              🛍️ TIENDA DE ACCESORIOS
+            </h1>
+            <p className="text-xl text-purple-300 max-w-3xl mx-auto">
+              Descubre accesorios únicos y equipa a tu personaje con el poder de la energía maldita
+            </p>
+          </motion.div>
+
+          {/* Información del usuario */}
+          <motion.div
+            initial={{ y: 30, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.2 }}
+            className="glass-dark p-6 rounded-xl border border-purple-500 shadow-jjk-lg mb-8 max-w-md mx-auto"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <img
+                  src={user?.personaje?.avatar || '/avatars/avatar-gojo.png'}
+                  alt="Avatar"
+                  className="w-16 h-16 rounded-full border-2 border-purple-500"
+                />
+                <div>
+                  <h3 className="text-lg font-bold text-purple-400">{user?.nombre}</h3>
+                  <p className="text-gray-400 text-sm">{user?.personaje?.nombre || 'Sin personaje'}</p>
                 </div>
               </div>
-            </motion.div>
-          )}
+              <div className="text-right">
+                <p className="text-yellow-400 font-bold text-2xl">{user?.monedas || 0}</p>
+                <p className="text-gray-400 text-sm">Monedas</p>
+              </div>
+            </div>
+          </motion.div>
 
-          {/* Catálogo de Accesorios en Grid */}
+          {/* Tienda 3D */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
+            initial={{ y: 30, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.4 }}
+            className="glass-dark rounded-xl border border-purple-500 shadow-jjk-lg overflow-hidden"
           >
-            {Object.entries(accesorios).map(([id, accesorio]) => (
-              <motion.div
-                key={id}
-                whileHover={{ scale: 1.05 }}
-                className={`bg-gray-900/60 backdrop-blur-sm rounded-xl p-6 border-2 transition-all cursor-pointer ${
-                  yaTieneAccesorio(id) 
-                    ? 'border-green-500 bg-green-900/20' 
-                    : getColorRareza(accesorio.rareza)
-                }`}
-                onClick={() => !yaTieneAccesorio(id) && comprarAccesorio({ id, ...accesorio })}
-              >
-                <div className="text-center">
-                  <div className="text-4xl mb-4">{getIconoRareza(accesorio.rareza)}</div>
-                  <h3 className="text-xl font-bold mb-2">{accesorio.nombre}</h3>
-                  <p className="text-gray-400 text-sm mb-4">{accesorio.descripcion}</p>
-                  
-                  <div className="flex justify-between items-center">
-                    <span className="text-yellow-400 font-bold text-lg">{accesorio.precio} 💰</span>
-                    {yaTieneAccesorio(id) ? (
-                      <span className="text-green-400 font-bold">✓ COMPRADO</span>
-                    ) : (
-                      <button
-                        disabled={cargando || usuario?.monedas < accesorio.precio}
-                        className={`px-4 py-2 rounded-lg font-bold transition-all ${
-                          usuario?.monedas >= accesorio.precio
-                            ? 'bg-green-600 hover:bg-green-700 text-white'
-                            : 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                        }`}
-                      >
-                        {cargando ? 'Comprando...' : 'Comprar'}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-            ))}
+            <Shop3D
+              accesorios={[]}
+              usuario={user}
+              onBuyAccessory={handleBuyAccessory}
+              character={personajeSeleccionado}
+            />
+          </motion.div>
+
+          {/* Botón de regreso */}
+          <motion.div
+            initial={{ y: 30, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.6 }}
+            className="text-center mt-8"
+          >
+            <button
+              onClick={() => router.push('/perfil/estudiante')}
+              className="bg-gradient-to-r from-purple-600 to-purple-800 hover:from-purple-700 hover:to-purple-900 text-white px-8 py-3 rounded-lg font-bold transition-all duration-300 btn-jjk"
+            >
+              ← Volver al Perfil
+            </button>
           </motion.div>
         </div>
-      )}
-
-      {/* Botón de volver */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="text-center mt-8 pb-8"
-      >
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          onClick={() => router.back()}
-          className="text-gray-400 hover:text-white underline transition-colors"
-        >
-          ← Volver al Perfil
-        </motion.button>
-      </motion.div>
-
-      {/* Efectos de fondo */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-yellow-500/10 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute top-3/4 right-1/4 w-24 h-24 bg-orange-500/10 rounded-full blur-2xl animate-pulse delay-1000"></div>
-        <div className="absolute bottom-1/4 left-1/3 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl animate-pulse delay-2000"></div>
       </div>
     </div>
   )

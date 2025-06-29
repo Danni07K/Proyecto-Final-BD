@@ -2,13 +2,16 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
+import { jwtDecode } from 'jwt-decode'
+import CharacterViewer3D from '@/components/CharacterViewer3D'
 
 const personajesJJK = [
-  { nombre: 'Gojo', avatar: '/avatars/avatar-gojo.png', descripcion: 'El más fuerte de todos los hechiceros' },
-  { nombre: 'Megumi', avatar: '/avatars/avatar-megumi.png', descripcion: 'Maestro de las sombras' },
-  { nombre: 'Nobara', avatar: '/avatars/avatar-nobara.png', descripcion: 'Especialista en maldiciones' },
-  { nombre: 'Itadori', avatar: '/avatars/avatar-itadori.png', descripcion: 'Portador de Sukuna' },
-  { nombre: 'Yuta', avatar: '/avatars/avatar-yuta.png', descripcion: 'El sucesor de Gojo' },
+  { id: 'gojo', nombre: 'Satoru Gojo', avatar: '/avatars/avatar-gojo.png', descripcion: 'El más fuerte de todos los hechiceros', auraColor: '#3b82f6' },
+  { id: 'yuji', nombre: 'Yuji Itadori', avatar: '/avatars/avatar-itadori.png', descripcion: 'Estudiante con potencial excepcional', auraColor: '#ef4444' },
+  { id: 'megumi', nombre: 'Megumi Fushiguro', avatar: '/avatars/avatar-megumi.png', descripcion: 'Maestro de las sombras', auraColor: '#1f2937' },
+  { id: 'nobara', nombre: 'Nobara Kugisaki', avatar: '/avatars/avatar-nobara.png', descripcion: 'Especialista en maldiciones', auraColor: '#ec4899' },
+  { id: 'yuta', nombre: 'Yuta Okkotsu', avatar: '/avatars/avatar-yuta.png', descripcion: 'El sucesor de Gojo', auraColor: '#10b981' },
+  { id: 'nanami', nombre: 'Kento Nanami', avatar: '/avatars/avatar-nanami.png', descripcion: 'Hechicero experimentado', auraColor: '#f59e0b' },
 ]
 
 export default function PerfilEstudiante() {
@@ -17,6 +20,7 @@ export default function PerfilEstudiante() {
   const [isLoading, setIsLoading] = useState(true)
   const [isUpdating, setIsUpdating] = useState(false)
   const [error, setError] = useState(null)
+  const [equippedAccessories, setEquippedAccessories] = useState([])
   const router = useRouter()
 
   useEffect(() => {
@@ -28,7 +32,7 @@ export default function PerfilEstudiante() {
           return
         }
         
-        const payload = JSON.parse(atob(token.split('.')[1]))
+        const payload = jwtDecode(token)
         
         const res = await fetch(`/api/usuarios/${payload.id}`, {
           headers: { Authorization: `Bearer ${token}` }
@@ -39,6 +43,36 @@ export default function PerfilEstudiante() {
         
         const data = await res.json()
         setUser(data.usuario)
+        
+        // Configurar personaje seleccionado
+        if (data.usuario.personaje) {
+          const personaje = personajesJJK.find(p => p.id === data.usuario.personaje.nombre?.toLowerCase())
+          if (personaje) {
+            setPersonajeSeleccionado(personaje)
+          }
+        }
+        
+        // Cargar accesorios equipados (simulado por ahora)
+        setEquippedAccessories([
+          {
+            id: '1',
+            nombre: 'Espada Maldita',
+            descripcion: 'Espada forjada con energía maldita',
+            precio: 1500,
+            rareza: 'legendario',
+            tipo: 'arma',
+            stats: { ataque: 50, defensa: 10 }
+          },
+          {
+            id: '2',
+            nombre: 'Amuleto de Protección',
+            descripcion: 'Protege contra maldiciones menores',
+            precio: 800,
+            rareza: 'epico',
+            tipo: 'accesorio',
+            stats: { defensa: 30, resistencia: 20 }
+          }
+        ])
       } catch (err) {
         console.error('Error al cargar usuario:', err)
         setError('Error al cargar el perfil')
@@ -51,32 +85,36 @@ export default function PerfilEstudiante() {
     cargarUsuario()
   }, [router])
 
-  const seleccionarPersonaje = async () => {
+  const actualizarPersonaje = async () => {
     if (!personajeSeleccionado) return
     
     setIsUpdating(true)
-    setError(null)
-    
     try {
       const token = localStorage.getItem('token')
       const res = await fetch('/api/usuarios/personaje', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify(personajeSeleccionado),
+        body: JSON.stringify({
+          nombre: personajeSeleccionado.nombre,
+          avatar: personajeSeleccionado.avatar
+        })
       })
-      
-      if (!res.ok) {
-        throw new Error('Error al actualizar personaje')
+
+      if (res.ok) {
+        // Actualizar usuario local
+        setUser(prev => ({
+          ...prev,
+          personaje: {
+            nombre: personajeSeleccionado.nombre,
+            avatar: personajeSeleccionado.avatar
+          }
+        }))
       }
-      
-      const actualizado = await res.json()
-      setUser(prev => ({ ...prev, personaje: actualizado.personaje }))
-    } catch (err) {
-      console.error('Error al seleccionar personaje:', err)
-      setError('Error al seleccionar personaje')
+    } catch (error) {
+      console.error('Error al actualizar personaje:', error)
     } finally {
       setIsUpdating(false)
     }
@@ -91,10 +129,17 @@ export default function PerfilEstudiante() {
           className="text-center"
         >
           <div className="relative">
-            <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <div className="absolute inset-0 w-16 h-16 border-4 border-yellow-500 border-b-transparent rounded-full animate-spin mx-auto" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
+            <div className="w-20 h-20 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
+            <div className="absolute inset-0 w-20 h-20 border-4 border-yellow-500 border-b-transparent rounded-full animate-spin mx-auto" 
+                 style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
           </div>
-          <p className="text-white text-lg font-bold text-gradient">Cargando perfil...</p>
+          <motion.p 
+            className="text-white text-xl font-bold text-gradient"
+            animate={{ opacity: [0.5, 1, 0.5] }}
+            transition={{ duration: 2, repeat: Infinity }}
+          >
+            Cargando Perfil...
+          </motion.p>
         </motion.div>
       </div>
     )
@@ -122,249 +167,202 @@ export default function PerfilEstudiante() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-purple-950 to-black p-6 text-white">
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-center mb-12"
-      >
-        <h1 className="text-5xl font-extrabold text-gradient mb-4 drop-shadow-2xl">
-          🎮 PERFIL DEL ESTUDIANTE 🎮
-        </h1>
-        <p className="text-xl text-purple-300">
-          Bienvenido, {user?.nombre}
-        </p>
-        <p className="text-gray-400 mt-2">
-          Desarrolla tu poder como hechicero
-        </p>
-      </motion.div>
-
-      <div className="max-w-6xl mx-auto">
-        {/* Mostrar selector si no hay personaje */}
-        {!user?.personaje ? (
+    <div className="min-h-screen bg-gradient-to-br from-black via-purple-950 to-black text-white relative overflow-hidden">
+      {/* Partículas de energía maldita */}
+      <div className="absolute inset-0 pointer-events-none">
+        {[...Array(20)].map((_, i) => (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="glass-dark p-8 rounded-xl border border-purple-600 shadow-jjk-lg"
+            key={i}
+            className="absolute w-1 h-1 bg-purple-400 rounded-full"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+            }}
+            animate={{
+              y: [0, -100, 0],
+              opacity: [0, 1, 0],
+            }}
+            transition={{
+              duration: Math.random() * 3 + 2,
+              repeat: Infinity,
+              delay: Math.random() * 2,
+            }}
+          />
+        ))}
+      </div>
+
+      <div className="relative z-10 p-6">
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <motion.div
+            initial={{ y: -50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className="text-center mb-12"
           >
-            <h2 className="text-3xl font-bold text-gradient mb-6 text-center">
-              🎭 Elige tu Personaje
-            </h2>
-            <p className="text-gray-300 text-center mb-8">
-              Selecciona el personaje que representará tu poder como hechicero
+            <h1 className="text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-yellow-400 mb-4 drop-shadow-2xl">
+              👤 PERFIL DEL HECHICERO
+            </h1>
+            <p className="text-xl text-purple-300 max-w-3xl mx-auto">
+              Gestiona tu personaje, equipa accesorios y domina las técnicas de la energía maldita
             </p>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-              {personajesJJK.map((p, index) => (
-                <motion.div
-                  key={p.nombre}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: index * 0.1 }}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setPersonajeSeleccionado(p)}
-                  className={`cursor-pointer p-6 rounded-xl border-2 transition-all hover-lift ${
-                    personajeSeleccionado?.nombre === p.nombre
-                      ? 'border-purple-500 bg-purple-900/30 shadow-purple-500/50'
-                      : 'border-gray-700 hover:border-purple-600 bg-gray-800/50'
-                  }`}
-                >
-                  <div className="relative mb-4">
-                    <img src={p.avatar} alt={p.nombre} className="w-full h-32 object-contain" />
-                    <div className="absolute -inset-2 bg-purple-500/20 rounded-lg blur-lg animate-pulse"></div>
-                  </div>
-                  <h3 className="text-center font-bold text-purple-300 text-lg mb-2">{p.nombre}</h3>
-                  <p className="text-center text-gray-400 text-sm">{p.descripcion}</p>
-                </motion.div>
-              ))}
-            </div>
-            
-            <div className="text-center">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                disabled={!personajeSeleccionado || isUpdating}
-                onClick={seleccionarPersonaje}
-                className="bg-gradient-to-r from-purple-600 to-purple-800 hover:from-purple-700 hover:to-purple-900 px-8 py-4 rounded-lg text-white font-bold text-lg disabled:opacity-50 transition-all shadow-lg btn-jjk"
-              >
-                {isUpdating ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Confirmando...
-                  </span>
-                ) : (
-                  '⚡ Confirmar Personaje'
-                )}
-              </motion.button>
-            </div>
           </motion.div>
-        ) : (
-          <div className="grid lg:grid-cols-3 gap-8">
-            {/* Información del Usuario */}
+
+          {/* Información del usuario */}
+          <motion.div
+            initial={{ y: 30, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.2 }}
+            className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12"
+          >
+            {/* Tarjeta de información */}
             <motion.div
-              initial={{ opacity: 0, x: -50 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="lg:col-span-2 glass-dark p-8 rounded-xl border border-purple-600 shadow-jjk-lg"
+              whileHover={{ scale: 1.02 }}
+              className="glass-dark p-6 rounded-xl border border-purple-500 shadow-jjk-lg hover:shadow-purple-500/20 transition-all"
             >
-              <div className="flex items-center space-x-6 mb-8">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-purple-500/20 rounded-full blur-xl animate-pulse"></div>
-                  <img 
-                    src={user.personaje.avatar} 
-                    alt="Avatar" 
-                    className="relative w-24 h-24 rounded-full border-4 border-purple-500"
+              <div className="text-center mb-6">
+                <img
+                  src={user?.personaje?.avatar || '/avatars/avatar-gojo.png'}
+                  alt="Avatar"
+                  className="w-24 h-24 rounded-full border-4 border-purple-500 mx-auto mb-4 shadow-lg"
+                />
+                <h2 className="text-2xl font-bold text-purple-400">{user?.nombre}</h2>
+                <p className="text-gray-400">{user?.email}</p>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-300">Nivel:</span>
+                  <span className="text-yellow-400 font-bold text-xl">{user?.nivel || 1}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-300">Experiencia:</span>
+                  <span className="text-green-400 font-bold">{user?.experiencia || 0} XP</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-300">Monedas:</span>
+                  <span className="text-yellow-400 font-bold">{user?.monedas || 100} 💰</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-300">Puntos Positivos:</span>
+                  <span className="text-green-400 font-bold">{user?.puntosPositivos || 0}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-300">Puntos Negativos:</span>
+                  <span className="text-red-400 font-bold">{user?.puntosNegativos || 0}</span>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Visor de personaje 3D */}
+            <motion.div
+              initial={{ y: 30, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.4 }}
+              className="lg:col-span-2"
+            >
+              <div className="glass-dark p-6 rounded-xl border border-purple-500 shadow-jjk-lg">
+                <h3 className="text-2xl font-bold text-purple-400 mb-4 text-center">
+                  🎭 Tu Personaje
+                </h3>
+                {personajeSeleccionado ? (
+                  <CharacterViewer3D
+                    character={personajeSeleccionado}
+                    accessories={equippedAccessories}
+                    onAccessoryClick={(accessory) => {
+                      console.log('Accesorio clickeado:', accessory)
+                    }}
                   />
-                </div>
-                <div>
-                  <h2 className="text-3xl font-bold text-gradient">{user.nombre}</h2>
-                  <p className="text-xl text-purple-300">{user.personaje.nombre}</p>
-                  <p className="text-gray-400">Nivel {user.nivel} • {user.experiencia} XP</p>
-                </div>
-              </div>
-
-              {/* Estadísticas */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  className="bg-green-900/30 p-4 rounded-lg border border-green-500 text-center hover-lift"
-                >
-                  <p className="text-2xl font-bold text-green-400">{user.puntosPositivos || 0}</p>
-                  <p className="text-sm text-gray-400">Puntos +</p>
-                </motion.div>
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  className="bg-red-900/30 p-4 rounded-lg border border-red-500 text-center hover-lift"
-                >
-                  <p className="text-2xl font-bold text-red-400">{user.puntosNegativos || 0}</p>
-                  <p className="text-sm text-gray-400">Puntos -</p>
-                </motion.div>
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  className="bg-yellow-900/30 p-4 rounded-lg border border-yellow-500 text-center hover-lift"
-                >
-                  <p className="text-2xl font-bold text-yellow-400">{user.puntosGold || 0}</p>
-                  <p className="text-sm text-gray-400">GOLD</p>
-                </motion.div>
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  className="bg-purple-900/30 p-4 rounded-lg border border-purple-500 text-center hover-lift"
-                >
-                  <p className="text-2xl font-bold text-purple-400">{user.monedas || 0}</p>
-                  <p className="text-sm text-gray-400">Monedas</p>
-                </motion.div>
-              </div>
-
-              {/* Barra de Experiencia */}
-              <div className="mb-8">
-                <div className="flex justify-between text-sm text-gray-400 mb-2">
-                  <span>Experiencia</span>
-                  <span>{user.experiencia} / {user.nivel * 100} XP</span>
-                </div>
-                <div className="w-full bg-gray-700 rounded-full h-3 relative overflow-hidden">
-                  <motion.div 
-                    className="bg-gradient-to-r from-purple-500 to-purple-700 h-3 rounded-full relative overflow-hidden"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${Math.min((user.experiencia / (user.nivel * 100)) * 100, 100)}%` }}
-                    transition={{ duration: 1, ease: "easeOut" }}
-                  >
-                    <motion.div
-                      className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
-                      animate={{
-                        x: ['-100%', '100%']
-                      }}
-                      transition={{
-                        duration: 2,
-                        repeat: Infinity,
-                        ease: "linear"
-                      }}
-                    />
-                  </motion.div>
-                </div>
-              </div>
-
-              {/* Accesorios Comprados */}
-              {user.accesoriosComprados && user.accesoriosComprados.length > 0 && (
-                <div>
-                  <h3 className="text-lg font-bold text-purple-400 mb-3">🎭 Accesorios Adquiridos</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {user.accesoriosComprados.map((accesorio, index) => (
-                      <motion.span
-                        key={index}
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: index * 0.1 }}
-                        className="bg-green-900/30 text-green-400 px-3 py-1 rounded-full text-sm border border-green-500"
-                      >
-                        {accesorio}
-                      </motion.span>
-                    ))}
+                ) : (
+                  <div className="text-center py-12">
+                    <p className="text-gray-400 mb-4">No has seleccionado un personaje aún</p>
+                    <button
+                      onClick={() => router.push('/escoger-personaje')}
+                      className="bg-gradient-to-r from-purple-600 to-purple-800 hover:from-purple-700 hover:to-purple-900 text-white px-6 py-3 rounded-lg font-bold transition-all duration-300 btn-jjk"
+                    >
+                      🎭 Seleccionar Personaje
+                    </button>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </motion.div>
+          </motion.div>
 
-            {/* Panel de Acciones */}
+          {/* Acciones rápidas */}
+          <motion.div
+            initial={{ y: 30, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.6 }}
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12"
+          >
+            {/* Tienda */}
             <motion.div
-              initial={{ opacity: 0, x: 50 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="space-y-6"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => router.push('/perfil/estudiante/tienda')}
+              className="glass-dark p-6 rounded-xl border border-purple-600 shadow-jjk-lg hover:shadow-purple-500/20 transition-all cursor-pointer hover-lift"
             >
-              {/* Tienda */}
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => router.push('/perfil/estudiante/tienda')}
-                className="glass-dark p-6 rounded-xl border border-purple-600 shadow-jjk-lg hover:shadow-purple-500/20 transition-all cursor-pointer hover-lift"
-              >
-                <div className="text-center">
-                  <div className="text-4xl mb-4">🛍️</div>
-                  <h3 className="text-xl font-bold text-purple-400 mb-2">Tienda de Accesorios</h3>
-                  <p className="text-gray-300 text-sm mb-4">
-                    Compra accesorios únicos con tus monedas
-                  </p>
-                  <div className="bg-yellow-900/30 p-3 rounded-lg border border-yellow-500">
-                    <p className="text-lg font-bold text-yellow-400">{user.monedas || 0}</p>
-                    <p className="text-xs text-gray-400">Monedas disponibles</p>
-                  </div>
+              <div className="text-center">
+                <div className="text-4xl mb-4">🛍️</div>
+                <h3 className="text-xl font-bold text-purple-400 mb-2">Tienda de Accesorios</h3>
+                <p className="text-gray-300 text-sm mb-4">
+                  Compra accesorios únicos con tus monedas
+                </p>
+                <div className="bg-yellow-900/30 p-3 rounded-lg border border-yellow-500">
+                  <p className="text-lg font-bold text-yellow-400">{user?.monedas || 0}</p>
+                  <p className="text-xs text-gray-400">Monedas disponibles</p>
                 </div>
-              </motion.div>
-
-              {/* Ranking */}
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => router.push('/ranking')}
-                className="glass-dark p-6 rounded-xl border border-purple-600 shadow-jjk-lg hover:shadow-purple-500/20 transition-all cursor-pointer hover-lift"
-              >
-                <div className="text-center">
-                  <div className="text-4xl mb-4">🏆</div>
-                  <h3 className="text-xl font-bold text-purple-400 mb-2">Ranking</h3>
-                  <p className="text-gray-300 text-sm">
-                    Compite con otros hechiceros
-                  </p>
-                </div>
-              </motion.div>
-
-              {/* Misiones */}
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => router.push('/misiones')}
-                className="glass-dark p-6 rounded-xl border border-purple-600 shadow-jjk-lg hover:shadow-purple-500/20 transition-all cursor-pointer hover-lift"
-              >
-                <div className="text-center">
-                  <div className="text-4xl mb-4">⚔️</div>
-                  <h3 className="text-xl font-bold text-purple-400 mb-2">Misiones</h3>
-                  <p className="text-gray-300 text-sm">
-                    Completa misiones para ganar experiencia
-                  </p>
-                </div>
-              </motion.div>
+              </div>
             </motion.div>
-          </div>
-        )}
+
+            {/* Ranking */}
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => router.push('/ranking')}
+              className="glass-dark p-6 rounded-xl border border-purple-600 shadow-jjk-lg hover:shadow-purple-500/20 transition-all cursor-pointer hover-lift"
+            >
+              <div className="text-center">
+                <div className="text-4xl mb-4">🏆</div>
+                <h3 className="text-xl font-bold text-purple-400 mb-2">Ranking</h3>
+                <p className="text-gray-300 text-sm">
+                  Compite con otros hechiceros
+                </p>
+              </div>
+            </motion.div>
+
+            {/* Misiones */}
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => router.push('/misiones')}
+              className="glass-dark p-6 rounded-xl border border-purple-600 shadow-jjk-lg hover:shadow-purple-500/20 transition-all cursor-pointer hover-lift"
+            >
+              <div className="text-center">
+                <div className="text-4xl mb-4">⚔️</div>
+                <h3 className="text-xl font-bold text-purple-400 mb-2">Misiones</h3>
+                <p className="text-gray-300 text-sm">
+                  Completa misiones para ganar experiencia
+                </p>
+              </div>
+            </motion.div>
+
+            {/* Unirse a Clase */}
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => router.push('/perfil/estudiante/unirse-clase')}
+              className="glass-dark p-6 rounded-xl border border-purple-600 shadow-jjk-lg hover:shadow-purple-500/20 transition-all cursor-pointer hover-lift"
+            >
+              <div className="text-center">
+                <div className="text-4xl mb-4">🏫</div>
+                <h3 className="text-xl font-bold text-purple-400 mb-2">Unirse a Clase</h3>
+                <p className="text-gray-300 text-sm">
+                  Únete a una clase con código
+                </p>
+              </div>
+            </motion.div>
+          </motion.div>
+        </div>
       </div>
     </div>
   )

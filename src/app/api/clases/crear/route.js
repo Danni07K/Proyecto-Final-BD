@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { connectDB } from '@/lib/mongoose'
+import Usuario from '@/models/Usuario'
 import Clase from '@/models/Clase'
-import User from '@/models/Usuario'
 import { verifyToken } from '@/lib/auth'
 
 function generarCodigoUnico() {
@@ -19,19 +19,30 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Solo los profesores pueden crear clases' }, { status: 403 })
     }
 
-    const { nombre } = await req.json()
-    const codigoUnico = generarCodigoUnico()
+    const { nombre, descripcion, habilidades } = await req.json()
 
-    const clase = await Clase.create({
+    if (!nombre || !descripcion) {
+      return NextResponse.json({ error: 'Nombre y descripción son requeridos' }, { status: 400 })
+    }
+
+    // Generar código único
+    const codigoUnico = Math.random().toString(36).substring(2, 8).toUpperCase()
+
+    const nuevaClase = await Clase.create({
       nombre,
+      descripcion,
+      habilidades: habilidades || [],
       codigoUnico,
-      profesorId: payload.id,
-      estudiantes: []
+      profesorId: payload.id
     })
 
-    return NextResponse.json({ message: 'Clase creada', codigoUnico, claseId: clase._id })
-  } catch (err) {
-    console.error(err)
-    return NextResponse.json({ error: 'Error en la creación de la clase' }, { status: 500 })
+    return NextResponse.json({
+      message: 'Clase creada exitosamente',
+      clase: nuevaClase
+    })
+
+  } catch (error) {
+    console.error('Error al crear clase:', error)
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }

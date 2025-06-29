@@ -1,7 +1,5 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
-import { useThree } from '@react-three/fiber'
-import * as THREE from 'three'
 import { motion, AnimatePresence } from 'framer-motion'
 
 // Configuración de sonidos
@@ -10,22 +8,22 @@ const SOUNDS = {
   'attack': {
     url: '/sounds/energia-maldita.mp3',
     volume: 0.7,
-    spatial: true
+    spatial: false
   },
   'defend': {
     url: '/sounds/energia-maldita.mp3',
     volume: 0.5,
-    spatial: true
+    spatial: false
   },
   'special': {
     url: '/sounds/energia-maldita.mp3',
     volume: 0.8,
-    spatial: true
+    spatial: false
   },
   'damage': {
     url: '/sounds/energia-maldita.mp3',
     volume: 0.6,
-    spatial: true
+    spatial: false
   },
 
   // Sonidos de energía maldita
@@ -37,15 +35,15 @@ const SOUNDS = {
   'cursed_energy': {
     url: '/sounds/energia-maldita.mp3',
     volume: 0.5,
-    spatial: true
+    spatial: false
   },
   'domain_expansion': {
     url: '/sounds/energia-maldita.mp3',
     volume: 0.9,
-    spatial: true
+    spatial: false
   },
 
-  // Sonidos de UI (todos usan energia-maldita.mp3 para evitar 404)
+  // Sonidos de UI
   'button_hover': {
     url: '/sounds/energia-maldita.mp3',
     volume: 0.3,
@@ -94,68 +92,6 @@ const SOUNDS = {
   }
 }
 
-// Componente de audio 3D
-function Audio3D({ soundId, position = [0, 0, 0], volume = 1, loop = false }) {
-  const { camera } = useThree()
-  const audioRef = useRef()
-  const listenerRef = useRef()
-
-  useEffect(() => {
-    if (!audioRef.current) return
-
-    const sound = SOUNDS[soundId]
-    if (!sound) return
-
-    const audio = new Audio(sound.url)
-    audio.volume = sound.volume * volume
-    audio.loop = loop || sound.loop || false
-    audioRef.current = audio
-
-    if (sound.spatial) {
-      // Configurar audio espacial
-      const audioContext = new (window.AudioContext || window.webkitAudioContext)()
-      const source = audioContext.createMediaElementSource(audio)
-      const panner = audioContext.createPanner()
-      
-      panner.setPosition(...position)
-      panner.setDistanceModel('inverse')
-      panner.setRefDistance(1)
-      panner.setMaxDistance(100)
-      panner.setRolloffFactor(1)
-      
-      source.connect(panner)
-      panner.connect(audioContext.destination)
-      
-      // Actualizar posición del panner cuando se mueve la cámara
-      const updatePosition = () => {
-        const cameraPosition = camera.position
-        panner.setPosition(
-          position[0] - cameraPosition.x,
-          position[1] - cameraPosition.y,
-          position[2] - cameraPosition.z
-        )
-      }
-      
-      updatePosition()
-      camera.addEventListener('position', updatePosition)
-      
-      return () => {
-        camera.removeEventListener('position', updatePosition)
-        audioContext.close()
-      }
-    }
-
-    return () => {
-      if (audio) {
-        audio.pause()
-        audio.currentTime = 0
-      }
-    }
-  }, [soundId, position, volume, loop, camera])
-
-  return null
-}
-
 // Hook personalizado para el sistema de audio
 export function useAudioSystem() {
   const [audioEnabled, setAudioEnabled] = useState(false)
@@ -165,6 +101,7 @@ export function useAudioSystem() {
   const [currentMusic, setCurrentMusic] = useState(null)
   const audioContextRef = useRef(null)
   const audioCache = useRef(new Map())
+  const currentMusicRef = useRef(null)
 
   // Inicializar sistema de audio
   useEffect(() => {
@@ -188,6 +125,10 @@ export function useAudioSystem() {
       if (audioContextRef.current) {
         audioContextRef.current.close()
       }
+      if (currentMusicRef.current) {
+        currentMusicRef.current.pause()
+        currentMusicRef.current = null
+      }
     }
   }, [])
 
@@ -201,7 +142,7 @@ export function useAudioSystem() {
           audio.preload = 'auto'
           audioCache.current.set(soundId, audio)
         } catch (error) {
-          console.error(`Error al precargar ${soundId}:`, error)
+          console.error(`Error al precargar sonido ${soundId}:`, error)
         }
       }
     }
@@ -209,7 +150,7 @@ export function useAudioSystem() {
 
   // Reproducir sonido
   const playSound = (soundId, options = {}) => {
-    if (!audioEnabled) return
+    if (!audioEnabled || !audioContextRef.current) return
 
     const sound = SOUNDS[soundId]
     if (!sound) {
@@ -218,111 +159,123 @@ export function useAudioSystem() {
     }
 
     try {
-      let audio
-      
-      // Usar caché si está disponible
-      if (audioCache.current.has(soundId)) {
-        audio = audioCache.current.get(soundId).cloneNode()
-      } else {
-        audio = new Audio(sound.url)
-      }
-
-      // Configurar volumen
-      const volume = (sound.volume * sfxVolume * masterVolume) * (options.volume || 1)
-      audio.volume = Math.min(volume, 1)
-
-      // Configurar loop
+      const audio = audioCache.current.get(soundId) || new Audio(sound.url)
+      audio.volume = (sound.volume * sfxVolume * masterVolume) * (options.volume || 1)
       audio.loop = options.loop || sound.loop || false
-
-      // Reproducir
-      audio.play().catch(error => {
-        console.error(`Error al reproducir ${soundId}:`, error)
-      })
-
-      // Limpiar después de reproducir (si no es loop)
-      if (!audio.loop) {
-        audio.addEventListener('ended', () => {
-          audio.remove()
+      
+      if (audio.readyState >= 2) {
+        audio.play().catch(error => {
+          console.error(`Error al reproducir sonido ${soundId}:`, error)
         })
+      } else {
+        audio.addEventListener('canplaythrough', () => {
+          audio.play().catch(error => {
+            console.error(`Error al reproducir sonido ${soundId}:`, error)
+          })
+        }, { once: true })
       }
-
-      return audio
     } catch (error) {
-      console.error(`Error al reproducir ${soundId}:`, error)
+      console.error(`Error al reproducir sonido ${soundId}:`, error)
     }
   }
 
   // Reproducir música
   const playMusic = (musicId, fadeIn = true) => {
-    if (!audioEnabled) return
+    if (!audioEnabled || !audioContextRef.current) return
 
-    // Detener música actual
-    if (currentMusic) {
-      if (fadeIn) {
-        fadeOutMusic(currentMusic, () => {
-          startNewMusic(musicId)
-        })
-      } else {
-        currentMusic.pause()
-        currentMusic.currentTime = 0
-        startNewMusic(musicId)
+    const music = SOUNDS[musicId]
+    if (!music) {
+      console.warn(`Música no encontrada: ${musicId}`)
+      return
+    }
+
+    try {
+      // Detener música actual si existe
+      if (currentMusicRef.current) {
+        currentMusicRef.current.pause()
+        currentMusicRef.current = null
       }
-    } else {
-      startNewMusic(musicId)
+
+      const audio = new Audio(music.url)
+      audio.volume = fadeIn ? 0 : (music.volume * musicVolume * masterVolume)
+      audio.loop = music.loop || false
+      
+      currentMusicRef.current = audio
+      setCurrentMusic(musicId)
+
+      audio.addEventListener('canplaythrough', () => {
+        audio.play().catch(error => {
+          console.error(`Error al reproducir música ${musicId}:`, error)
+        })
+
+        if (fadeIn) {
+          fadeInMusic(audio, music.volume * musicVolume * masterVolume)
+        }
+      }, { once: true })
+    } catch (error) {
+      console.error(`Error al reproducir música ${musicId}:`, error)
     }
   }
 
-  const startNewMusic = (musicId) => {
-    const sound = SOUNDS[musicId]
-    if (!sound) return
+  // Fade in de música
+  const fadeInMusic = (audio, targetVolume) => {
+    const duration = 2000 // 2 segundos
+    const steps = 20
+    const stepDuration = duration / steps
+    const volumeStep = targetVolume / steps
+    let currentStep = 0
 
-    const audio = new Audio(sound.url)
-    audio.volume = 0
-    audio.loop = sound.loop || false
-    
-    if (sound.loop) {
-      audio.volume = sound.volume * musicVolume * masterVolume
-    } else {
-      audio.volume = sound.volume * musicVolume * masterVolume
-    }
+    const fadeInterval = setInterval(() => {
+      currentStep++
+      audio.volume = volumeStep * currentStep
 
-    audio.play().catch(error => {
-      console.error(`Error al reproducir música ${musicId}:`, error)
-    })
-
-    setCurrentMusic(audio)
+      if (currentStep >= steps) {
+        clearInterval(fadeInterval)
+        audio.volume = targetVolume
+      }
+    }, stepDuration)
   }
 
   // Fade out de música
   const fadeOutMusic = (audio, callback) => {
-    const fadeOut = setInterval(() => {
-      if (audio.volume > 0.1) {
-        audio.volume -= 0.1
-      } else {
+    const duration = 1000 // 1 segundo
+    const steps = 10
+    const stepDuration = duration / steps
+    const initialVolume = audio.volume
+    const volumeStep = initialVolume / steps
+    let currentStep = 0
+
+    const fadeInterval = setInterval(() => {
+      currentStep++
+      audio.volume = initialVolume - (volumeStep * currentStep)
+
+      if (currentStep >= steps) {
+        clearInterval(fadeInterval)
         audio.pause()
         audio.currentTime = 0
-        clearInterval(fadeOut)
         if (callback) callback()
       }
-    }, 100)
+    }, stepDuration)
   }
 
   // Detener música
   const stopMusic = (fadeOut = true) => {
-    if (currentMusic) {
+    if (currentMusicRef.current) {
       if (fadeOut) {
-        fadeOutMusic(currentMusic, () => {
+        fadeOutMusic(currentMusicRef.current, () => {
+          currentMusicRef.current = null
           setCurrentMusic(null)
         })
       } else {
-        currentMusic.pause()
-        currentMusic.currentTime = 0
+        currentMusicRef.current.pause()
+        currentMusicRef.current.currentTime = 0
+        currentMusicRef.current = null
         setCurrentMusic(null)
       }
     }
   }
 
-  // Efectos de sonido específicos
+  // Funciones de conveniencia para sonidos específicos
   const playButtonHover = () => playSound('button_hover')
   const playButtonClick = () => playSound('button_click')
   const playAchievement = () => playSound('achievement')
@@ -335,7 +288,7 @@ export function useAudioSystem() {
   const playCursedEnergy = () => playSound('cursed_energy')
   const playDomainExpansion = () => playSound('domain_expansion')
 
-  // Música ambiental
+  // Funciones de conveniencia para música
   const playAmbientDay = () => playMusic('ambient_day')
   const playAmbientNight = () => playMusic('ambient_night')
   const playBattleTheme = () => playMusic('battle_theme')
@@ -355,12 +308,8 @@ export function useAudioSystem() {
     setMusicVolume,
     setSfxVolume,
 
-    // Sonidos generales
+    // Funciones de sonido
     playSound,
-    playMusic,
-    stopMusic,
-
-    // Efectos específicos
     playButtonHover,
     playButtonClick,
     playAchievement,
@@ -373,7 +322,9 @@ export function useAudioSystem() {
     playCursedEnergy,
     playDomainExpansion,
 
-    // Música
+    // Funciones de música
+    playMusic,
+    stopMusic,
     playAmbientDay,
     playAmbientNight,
     playBattleTheme,
@@ -388,14 +339,16 @@ export function useAudioSystem() {
 export function AudioControls({ audioSystem }) {
   const [showControls, setShowControls] = useState(false)
 
+  if (!audioSystem) return null
+
   return (
-    <>
-      {/* Botón de controles de audio */}
+    <div className="fixed bottom-4 right-4 z-50">
+      {/* Botón de toggle */}
       <motion.button
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
         onClick={() => setShowControls(!showControls)}
-        className="fixed top-4 left-4 bg-purple-600 hover:bg-purple-700 text-white p-3 rounded-full shadow-2xl z-40"
+        className="bg-purple-600 hover:bg-purple-700 text-white p-3 rounded-full shadow-lg transition-all"
       >
         {audioSystem.audioEnabled ? '🔊' : '🔇'}
       </motion.button>
@@ -404,16 +357,31 @@ export function AudioControls({ audioSystem }) {
       <AnimatePresence>
         {showControls && (
           <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="fixed top-16 left-4 bg-black/90 backdrop-blur-sm rounded-xl p-4 border border-purple-500 shadow-2xl z-40 min-w-[250px]"
+            initial={{ opacity: 0, y: 20, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            className="absolute bottom-16 right-0 bg-black/90 backdrop-blur-sm p-4 rounded-lg border border-purple-500 min-w-[250px]"
           >
-            <h3 className="text-lg font-bold text-purple-400 mb-4">🎵 Controles de Audio</h3>
+            <h3 className="text-white font-bold mb-4">🎵 Controles de Audio</h3>
             
-            {/* Master Volume */}
-            <div className="mb-4">
-              <label className="block text-sm text-gray-300 mb-2">Volumen General</label>
+            {/* Toggle principal */}
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-gray-300">Audio</span>
+              <button
+                onClick={() => audioSystem.setAudioEnabled(!audioSystem.audioEnabled)}
+                className={`px-3 py-1 rounded text-sm font-bold transition-all ${
+                  audioSystem.audioEnabled
+                    ? 'bg-green-600 text-white'
+                    : 'bg-red-600 text-white'
+                }`}
+              >
+                {audioSystem.audioEnabled ? 'ON' : 'OFF'}
+              </button>
+            </div>
+
+            {/* Volumen maestro */}
+            <div className="mb-3">
+              <label className="text-gray-300 text-sm block mb-1">Volumen Maestro</label>
               <input
                 type="range"
                 min="0"
@@ -423,14 +391,11 @@ export function AudioControls({ audioSystem }) {
                 onChange={(e) => audioSystem.setMasterVolume(parseFloat(e.target.value))}
                 className="w-full"
               />
-              <div className="text-xs text-gray-400 mt-1">
-                {Math.round(audioSystem.masterVolume * 100)}%
-              </div>
             </div>
 
-            {/* Music Volume */}
-            <div className="mb-4">
-              <label className="block text-sm text-gray-300 mb-2">Volumen Música</label>
+            {/* Volumen música */}
+            <div className="mb-3">
+              <label className="text-gray-300 text-sm block mb-1">Volumen Música</label>
               <input
                 type="range"
                 min="0"
@@ -440,14 +405,11 @@ export function AudioControls({ audioSystem }) {
                 onChange={(e) => audioSystem.setMusicVolume(parseFloat(e.target.value))}
                 className="w-full"
               />
-              <div className="text-xs text-gray-400 mt-1">
-                {Math.round(audioSystem.musicVolume * 100)}%
-              </div>
             </div>
 
-            {/* SFX Volume */}
+            {/* Volumen efectos */}
             <div className="mb-4">
-              <label className="block text-sm text-gray-300 mb-2">Volumen Efectos</label>
+              <label className="text-gray-300 text-sm block mb-1">Volumen Efectos</label>
               <input
                 type="range"
                 min="0"
@@ -457,46 +419,27 @@ export function AudioControls({ audioSystem }) {
                 onChange={(e) => audioSystem.setSfxVolume(parseFloat(e.target.value))}
                 className="w-full"
               />
-              <div className="text-xs text-gray-400 mt-1">
-                {Math.round(audioSystem.sfxVolume * 100)}%
-              </div>
             </div>
 
             {/* Botones de prueba */}
             <div className="grid grid-cols-2 gap-2">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+              <button
                 onClick={audioSystem.playButtonClick}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm font-bold transition-all"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs"
               >
-                🔊 Probar
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => audioSystem.setAudioEnabled(!audioSystem.audioEnabled)}
-                className={`px-3 py-2 rounded-lg text-sm font-bold transition-all ${
-                  audioSystem.audioEnabled 
-                    ? 'bg-green-600 hover:bg-green-700 text-white' 
-                    : 'bg-red-600 hover:bg-red-700 text-white'
-                }`}
+                Test Click
+              </button>
+              <button
+                onClick={audioSystem.playAchievement}
+                className="bg-yellow-600 hover:bg-yellow-700 text-white px-2 py-1 rounded text-xs"
               >
-                {audioSystem.audioEnabled ? '🔇 Desactivar' : '🔊 Activar'}
-              </motion.button>
+                Test Achievement
+              </button>
             </div>
-
-            {/* Música actual */}
-            {audioSystem.currentMusic && (
-              <div className="mt-4 p-2 bg-purple-900/30 rounded-lg">
-                <div className="text-xs text-gray-400">Reproduciendo:</div>
-                <div className="text-sm text-purple-300">🎵 Música Ambiental</div>
-              </div>
-            )}
           </motion.div>
         )}
       </AnimatePresence>
-    </>
+    </div>
   )
 }
 
@@ -507,7 +450,6 @@ export default function AudioSystem3D() {
   return (
     <>
       <AudioControls audioSystem={audioSystem} />
-      {/* No renderices {audioSystem} aquí */}
     </>
   )
 } 

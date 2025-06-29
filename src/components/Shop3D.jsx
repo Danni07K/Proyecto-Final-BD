@@ -1,36 +1,24 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
-import { Canvas, useFrame } from '@react-three/fiber'
-import { OrbitControls, useGLTF, Environment, Html, Float, Text, PresentationControls } from '@react-three/drei'
 import { motion, AnimatePresence } from 'framer-motion'
-import * as THREE from 'three'
-import VisualEffects, { EnergyParticles, AuraEffect, DimensionalPortal } from './VisualEffects'
+import CharacterViewer3D from './CharacterViewer3D'
 
-// Componente para accesorios 3D
-function Accessory3D({ accessory, isSelected, onSelect, position, onBuy }) {
-  const meshRef = useRef()
+// Componente para accesorios 3D con efectos por rareza (sin Three.js)
+function Accessory3D({ accessory, isSelected, onSelect, onBuy, onPreview }) {
   const [hovered, setHovered] = useState(false)
+  const [rotation, setRotation] = useState(0)
   
-  // Animación de rotación automática
-  useFrame((state) => {
-    if (meshRef.current) {
-      // Rotación automática
-      meshRef.current.rotation.y = state.clock.elapsedTime * 0.5
-      
-      // Efecto de flotación
-      meshRef.current.position.y = position[1] + Math.sin(state.clock.elapsedTime * 2) * 0.1
-      
-      // Efecto de escala en hover
-      if (hovered || isSelected) {
-        meshRef.current.scale.setScalar(1.2)
-      } else {
-        meshRef.current.scale.setScalar(1)
-      }
-    }
-  })
+  // Animación de rotación
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRotation(prev => (prev + 2) % 360)
+    }, 50)
+    
+    return () => clearInterval(interval)
+  }, [])
 
-  const getRarityColor = (rarity) => {
-    switch (rarity) {
+  const getRarityColor = (rareza) => {
+    switch (rareza) {
       case 'legendario': return '#fbbf24'
       case 'epico': return '#a855f7'
       case 'raro': return '#3b82f6'
@@ -39,88 +27,99 @@ function Accessory3D({ accessory, isSelected, onSelect, position, onBuy }) {
     }
   }
 
-  const getRarityGlow = (rarity) => {
-    switch (rarity) {
-      case 'legendario': return '#fbbf24'
-      case 'epico': return '#a855f7'
-      case 'raro': return '#3b82f6'
-      case 'comun': return '#6b7280'
-      default: return '#6b7280'
+  const getAccessoryIcon = (tipo) => {
+    switch (tipo) {
+      case 'arma': return '⚔️'
+      case 'armadura': return '🛡️'
+      case 'accesorio': return '💍'
+      case 'libro': return '📖'
+      case 'consumible': return '🧪'
+      default: return '✨'
     }
   }
 
   return (
-    <group
-      ref={meshRef}
-      position={position}
-      onPointerOver={() => setHovered(true)}
-      onPointerOut={() => setHovered(false)}
+    <motion.div
+      className="relative cursor-pointer"
+      animate={{ rotateY: rotation }}
+      transition={{ duration: 0.1, ease: "linear" }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       onClick={() => onSelect(accessory)}
+      whileHover={{ scale: 1.1 }}
     >
       {/* Modelo 3D del accesorio */}
-      <mesh>
-        <boxGeometry args={[1, 1, 1]} />
-        <meshStandardMaterial 
-          color={getRarityColor(accessory.rareza)}
-          metalness={0.8}
-          roughness={0.2}
-          emissive={getRarityGlow(accessory.rareza)}
-          emissiveIntensity={hovered ? 0.3 : 0.1}
-        />
-      </mesh>
+      <div 
+        className="w-16 h-16 rounded-full flex items-center justify-center text-2xl"
+        style={{
+          background: `linear-gradient(135deg, ${getRarityColor(accessory.rareza)}, ${getRarityColor(accessory.rareza)}dd)`,
+          boxShadow: `0 0 20px ${getRarityColor(accessory.rareza)}60`
+        }}
+      >
+        {getAccessoryIcon(accessory.tipo)}
+      </div>
 
-      {/* Aura de rareza */}
+      {/* Efectos especiales por rareza */}
       {(hovered || isSelected) && (
-        <mesh position={[0, 0, 0]}>
-          <sphereGeometry args={[1.5, 32, 32]} />
-          <meshBasicMaterial 
-            color={getRarityGlow(accessory.rareza)} 
-            transparent 
-            opacity={0.2}
-            wireframe
-          />
-        </mesh>
+        <motion.div
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: 1, opacity: 0.3 }}
+          className="absolute inset-0 rounded-full"
+          style={{
+            background: `radial-gradient(circle, ${getRarityColor(accessory.rareza)}40 0%, transparent 70%)`,
+            border: `2px solid ${getRarityColor(accessory.rareza)}60`
+          }}
+        />
       )}
 
-      {/* Información del accesorio */}
-      <Html position={[0, 2, 0]} center>
-        <div className="bg-black/80 backdrop-blur-sm rounded-lg p-3 border border-purple-500 min-w-[200px]">
-          <div className="text-center">
-            <p className="text-white font-bold text-sm">{accessory.nombre}</p>
-            <p className={`text-xs font-bold ${getRarityColor(accessory.rareza)}`}>
-              {accessory.rareza.toUpperCase()}
-            </p>
-            <p className="text-yellow-400 font-bold text-lg">{accessory.precio} 💰</p>
-            <p className="text-gray-300 text-xs mt-1">{accessory.descripcion}</p>
-          </div>
+      {/* Partículas para épicos y legendarios */}
+      {(accessory.rareza === 'epico' || accessory.rareza === 'legendario') && (hovered || isSelected) && (
+        <div className="absolute inset-0 pointer-events-none">
+          {[...Array(6)].map((_, i) => (
+            <motion.div
+              key={i}
+              className="absolute w-1 h-1 rounded-full"
+              style={{
+                backgroundColor: getRarityColor(accessory.rareza),
+                left: `${50 + Math.sin(i) * 30}%`,
+                top: `${50 + Math.cos(i) * 30}%`,
+              }}
+              animate={{
+                scale: [0, 1, 0],
+                opacity: [0, 0.8, 0],
+              }}
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+                delay: i * 0.3,
+              }}
+            />
+          ))}
         </div>
-      </Html>
-
-      {/* Botón de compra */}
-      {isSelected && (
-        <Html position={[0, -2, 0]} center>
-          <motion.button
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            whileHover={{ scale: 1.1 }}
-            onClick={(e) => {
-              e.stopPropagation()
-              onBuy(accessory)
-            }}
-            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-bold transition-all"
-          >
-            COMPRAR
-          </motion.button>
-        </Html>
       )}
-    </group>
+
+      {/* Portal dimensional para legendarios */}
+      {accessory.rareza === 'legendario' && (hovered || isSelected) && (
+        <motion.div
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: 1, opacity: 0.2 }}
+          className="absolute inset-0 rounded-full border-2 border-dashed"
+          style={{
+            borderColor: getRarityColor(accessory.rareza),
+            transform: 'scale(1.5)',
+          }}
+        />
+      )}
+    </motion.div>
   )
 }
 
 // Componente principal de la tienda 3D
-export default function Shop3D({ accesorios, usuario, onBuyAccessory }) {
+export default function Shop3D({ accesorios, usuario, onBuyAccessory, character }) {
   const [selectedAccessory, setSelectedAccessory] = useState(null)
-  const [viewMode, setViewMode] = useState('showcase') // showcase, grid, detail
+  const [viewMode, setViewMode] = useState('showcase') // showcase, grid, preview
+  const [previewAccessory, setPreviewAccessory] = useState(null)
+  const [equippedAccessories, setEquippedAccessories] = useState([])
 
   // Configuración de accesorios de ejemplo
   const sampleAccessories = [
@@ -144,191 +143,298 @@ export default function Shop3D({ accesorios, usuario, onBuyAccessory }) {
     },
     {
       id: '3',
-      nombre: 'Poción de Energía',
-      descripcion: 'Restaura energía maldita',
-      precio: 300,
+      nombre: 'Libro de Técnicas',
+      descripcion: 'Contiene técnicas secretas de hechicería',
+      precio: 1200,
       rareza: 'raro',
-      tipo: 'consumible',
-      stats: { energia: 100 }
+      tipo: 'libro',
+      stats: { inteligencia: 25, mana: 15 }
     },
     {
       id: '4',
-      nombre: 'Túnica del Hechicero',
-      descripcion: 'Túnica con runas protectoras',
-      precio: 1200,
-      rareza: 'epico',
-      tipo: 'armadura',
-      stats: { defensa: 40, energia: 20 }
+      nombre: 'Poción de Energía',
+      descripcion: 'Restaura energía maldita',
+      precio: 300,
+      rareza: 'comun',
+      tipo: 'consumible',
+      stats: { energia: 50 }
     },
     {
       id: '5',
-      nombre: 'Grimorio Antiguo',
-      descripcion: 'Contiene técnicas prohibidas',
+      nombre: 'Armadura de Sombra',
+      descripcion: 'Armadura que absorbe ataques',
       precio: 2000,
       rareza: 'legendario',
-      tipo: 'libro',
-      stats: { conocimiento: 100, poder: 30 }
+      tipo: 'armadura',
+      stats: { defensa: 80, resistencia: 40 }
     },
     {
       id: '6',
-      nombre: 'Cristal de Energía',
-      descripcion: 'Amplifica el poder maldito',
-      precio: 600,
-      rareza: 'raro',
+      nombre: 'Anillo de Poder',
+      descripcion: 'Aumenta el poder de las técnicas',
+      precio: 1000,
+      rareza: 'epico',
       tipo: 'accesorio',
-      stats: { poder: 25, energia: 15 }
+      stats: { ataque: 30, poder: 25 }
     }
   ]
 
+  const accessoriesToShow = accesorios && accesorios.length > 0 ? accesorios : sampleAccessories
+
   const handleBuy = (accessory) => {
-    onBuyAccessory(accessory)
-    setSelectedAccessory(null)
+    if (usuario && usuario.monedas >= accessory.precio) {
+      if (onBuyAccessory) {
+        onBuyAccessory(accessory)
+      }
+      // Agregar a accesorios equipados
+      setEquippedAccessories(prev => [...prev, accessory])
+    } else {
+      alert('No tienes suficientes monedas para comprar este accesorio')
+    }
+  }
+
+  const handlePreview = (accessory) => {
+    setPreviewAccessory(accessory)
+    setViewMode('preview')
   }
 
   const getRarityIcon = (rareza) => {
     switch (rareza) {
-      case 'legendario': return '🌟'
-      case 'epico': return '💫'
-      case 'raro': return '⭐'
-      case 'comun': return '⚪'
-      default: return '⚪'
+      case 'legendario': return '⭐'
+      case 'epico': return '💎'
+      case 'raro': return '🔷'
+      case 'comun': return '🔶'
+      default: return '🔶'
     }
   }
 
-  return (
-    <div className="w-full h-[700px] relative">
-      {/* Canvas 3D */}
-      <Canvas camera={{ position: [0, 2, 8], fov: 60 }}>
-        <ambientLight intensity={0.6} />
-        <directionalLight position={[5, 5, 5]} intensity={1} />
-        <pointLight position={[-5, 5, -5]} intensity={0.5} color="#8b5cf6" />
-        <pointLight position={[5, -5, 5]} intensity={0.3} color="#fbbf24" />
-        
-        <Environment preset="night" />
-        
-        <PresentationControls
-          global
-          rotation={[0, -Math.PI / 4, 0]}
-          polar={[-Math.PI / 4, Math.PI / 4]}
-          azimuth={[-Math.PI / 4, Math.PI / 4]}
-        >
-          {/* Accesorios en disposición circular */}
-          {sampleAccessories.map((accessory, index) => {
-            const angle = (index / sampleAccessories.length) * Math.PI * 2
-            const radius = 5
-            const x = Math.cos(angle) * radius
-            const z = Math.sin(angle) * radius
-            
-            return (
-              <Accessory3D
-                key={accessory.id}
-                accessory={accessory}
-                isSelected={selectedAccessory?.id === accessory.id}
-                onSelect={setSelectedAccessory}
-                onBuy={handleBuy}
-                position={[x, 0, z]}
-              />
-            )
-          })}
-        </PresentationControls>
-      </Canvas>
+  const getRarityColor = (rareza) => {
+    switch (rareza) {
+      case 'legendario': return 'text-yellow-400'
+      case 'epico': return 'text-purple-400'
+      case 'raro': return 'text-blue-400'
+      case 'comun': return 'text-gray-400'
+      default: return 'text-gray-400'
+    }
+  }
 
-      {/* Panel de información del usuario */}
-      <motion.div
-        initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: 1, x: 0 }}
-        className="absolute top-4 left-4 bg-black/80 backdrop-blur-sm rounded-xl p-4 border border-purple-600"
-      >
-        <div className="flex items-center space-x-3">
-          <img
-            src={usuario?.personaje?.avatar || '/avatars/avatar-gojo.png'}
-            alt="Avatar"
-            className="w-12 h-12 rounded-full border-2 border-purple-500"
-          />
-          <div>
-            <p className="text-white font-bold">{usuario?.nombre}</p>
-            <p className="text-purple-300 text-sm">Nivel {usuario?.nivel}</p>
-            <p className="text-yellow-400 font-bold">{usuario?.monedas} 💰</p>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Panel de información del accesorio seleccionado */}
-      {selectedAccessory && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="absolute bottom-4 left-4 right-4 bg-black/80 backdrop-blur-sm rounded-xl p-6 border border-purple-600"
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <div className="flex items-center space-x-3 mb-2">
-                <span className="text-2xl">{getRarityIcon(selectedAccessory.rareza)}</span>
-                <h3 className="text-2xl font-bold text-white">{selectedAccessory.nombre}</h3>
-              </div>
-              <p className="text-purple-300 mb-2">{selectedAccessory.descripcion}</p>
-              <div className="grid grid-cols-2 gap-4">
-                {Object.entries(selectedAccessory.stats).map(([stat, value]) => (
-                  <div key={stat} className="text-center">
-                    <p className="text-green-400 font-bold">{value}</p>
-                    <p className="text-xs text-gray-400 uppercase">{stat}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-            
-            <div className="text-right ml-6">
-              <div className="bg-yellow-900/30 p-4 rounded-lg border border-yellow-500">
-                <p className="text-3xl font-bold text-yellow-400">{selectedAccessory.precio}</p>
-                <p className="text-sm text-gray-400">Monedas</p>
-              </div>
-              
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => handleBuy(selectedAccessory)}
-                disabled={usuario?.monedas < selectedAccessory.precio}
-                className={`mt-4 px-6 py-3 rounded-lg font-bold transition-all ${
-                  usuario?.monedas >= selectedAccessory.precio
-                    ? 'bg-green-600 hover:bg-green-700 text-white'
-                    : 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                }`}
-              >
-                {usuario?.monedas >= selectedAccessory.precio ? 'COMPRAR' : 'MONEDAS INSUFICIENTES'}
-              </motion.button>
-            </div>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Controles de vista */}
-      <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-sm rounded-lg p-3 border border-purple-500">
-        <div className="flex space-x-2">
+  // Vista de preview con personaje equipado
+  if (viewMode === 'preview' && previewAccessory) {
+    return (
+      <div className="w-full h-[600px] relative bg-gradient-to-br from-gray-900 to-black rounded-lg border border-purple-500 overflow-hidden">
+        <div className="absolute top-4 left-4 z-10">
           <button
             onClick={() => setViewMode('showcase')}
-            className={`px-3 py-1 rounded text-sm font-bold transition-all ${
-              viewMode === 'showcase' ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white'
-            }`}
+            className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-bold transition-all"
           >
-            SHOWCASE
+            ← Volver a la Tienda
           </button>
+        </div>
+        
+        <div className="absolute top-4 right-4 z-10 bg-black/80 backdrop-blur-sm p-4 rounded-lg border border-purple-500">
+          <h3 className="text-purple-400 font-bold mb-2">Preview: {previewAccessory.nombre}</h3>
+          <p className="text-gray-300 text-sm">{previewAccessory.descripcion}</p>
+          <p className={`text-sm font-bold ${getRarityColor(previewAccessory.rareza)}`}>
+            {getRarityIcon(previewAccessory.rareza)} {previewAccessory.rareza.toUpperCase()}
+          </p>
+          <p className="text-yellow-400 font-bold">{previewAccessory.precio} 💰</p>
+        </div>
+
+        <div className="w-full h-full">
+          {character && (
+            <CharacterViewer3D
+              character={character}
+              accessories={[previewAccessory]}
+              onAccessoryClick={() => {}}
+            />
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // Vista principal de la tienda
+  return (
+    <div className="w-full h-[600px] relative bg-gradient-to-br from-gray-900 to-black rounded-lg border border-purple-500 overflow-hidden">
+      {/* Partículas de energía maldita */}
+      <div className="absolute inset-0 pointer-events-none">
+        {[...Array(30)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute w-1 h-1 bg-purple-400 rounded-full"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+            }}
+            animate={{
+              y: [0, -100, 0],
+              opacity: [0, 1, 0],
+            }}
+            transition={{
+              duration: Math.random() * 3 + 2,
+              repeat: Infinity,
+              delay: Math.random() * 2,
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Controles de vista */}
+      <div className="absolute top-4 left-4 z-10 flex gap-2">
+        {['showcase', 'grid'].map((mode) => (
           <button
-            onClick={() => setViewMode('grid')}
+            key={mode}
+            onClick={() => setViewMode(mode)}
             className={`px-3 py-1 rounded text-sm font-bold transition-all ${
-              viewMode === 'grid' ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white'
+              viewMode === mode
+                ? 'bg-purple-600 text-white'
+                : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50'
             }`}
           >
-            GRID
+            {mode === 'showcase' ? '🎭 Showcase' : '📦 Grid'}
           </button>
+        ))}
+      </div>
+
+      {/* Información del usuario */}
+      <div className="absolute top-4 right-4 z-10 bg-black/80 backdrop-blur-sm p-4 rounded-lg border border-purple-500">
+        <div className="flex items-center gap-3">
+          <div className="text-center">
+            <p className="text-yellow-400 font-bold text-xl">{usuario?.monedas || 0}</p>
+            <p className="text-gray-400 text-sm">Monedas</p>
+          </div>
+          <div className="text-center">
+            <p className="text-purple-400 font-bold">{equippedAccessories.length}</p>
+            <p className="text-gray-400 text-sm">Equipados</p>
+          </div>
         </div>
       </div>
 
-      {/* Instrucciones */}
-      <div className="absolute top-20 right-4 bg-black/60 backdrop-blur-sm rounded-lg p-3 border border-purple-500">
-        <p className="text-white text-sm">
-          🖱️ Click para seleccionar • 🖱️ Arrastra para rotar • ⌨️ Zoom con rueda
-        </p>
-      </div>
+      {viewMode === 'showcase' ? (
+        // Vista 3D showcase
+        <div className="w-full h-full flex items-center justify-center">
+          <div className="relative">
+            {/* Accesorios en círculo */}
+            <div className="relative w-96 h-96">
+              {accessoriesToShow.map((accessory, index) => {
+                const angle = (index / accessoriesToShow.length) * Math.PI * 2
+                const radius = 120
+                const x = Math.cos(angle) * radius
+                const y = Math.sin(angle) * radius
+                
+                return (
+                  <motion.div
+                    key={accessory.id}
+                    className="absolute"
+                    style={{
+                      left: '50%',
+                      top: '50%',
+                      transform: `translate(${x}px, ${y}px)`,
+                    }}
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ delay: index * 0.1 }}
+                  >
+                    <Accessory3D
+                      accessory={accessory}
+                      isSelected={selectedAccessory?.id === accessory.id}
+                      onSelect={setSelectedAccessory}
+                      onBuy={handleBuy}
+                      onPreview={handlePreview}
+                    />
+                  </motion.div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      ) : (
+        // Vista de grid
+        <div className="w-full h-full overflow-y-auto p-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {accessoriesToShow.map((accessory) => (
+              <motion.div
+                key={accessory.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                whileHover={{ scale: 1.02 }}
+                className="bg-gray-900/80 backdrop-blur-sm p-4 rounded-lg border border-purple-500 hover:border-purple-400 transition-all cursor-pointer"
+                onClick={() => setSelectedAccessory(accessory)}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-white font-bold">{accessory.nombre}</h3>
+                  <span className={`text-2xl ${getRarityColor(accessory.rareza)}`}>
+                    {getRarityIcon(accessory.rareza)}
+                  </span>
+                </div>
+                
+                <p className="text-gray-300 text-sm mb-3">{accessory.descripcion}</p>
+                
+                <div className="flex items-center justify-between">
+                  <span className="text-yellow-400 font-bold">{accessory.precio} 💰</span>
+                  <span className={`text-xs font-bold px-2 py-1 rounded ${getRarityColor(accessory.rareza)} bg-gray-800/50`}>
+                    {accessory.rareza.toUpperCase()}
+                  </span>
+                </div>
+                
+                {selectedAccessory?.id === accessory.id && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-3 flex gap-2"
+                  >
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handlePreview(accessory)
+                      }}
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded font-bold transition-all text-sm"
+                    >
+                      👁️ Preview
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleBuy(accessory)
+                      }}
+                      className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded font-bold transition-all text-sm"
+                    >
+                      💰 Comprar
+                    </button>
+                  </motion.div>
+                )}
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Información del accesorio seleccionado */}
+      {selectedAccessory && viewMode === 'showcase' && (
+        <div className="absolute bottom-4 left-4 right-4 bg-black/80 backdrop-blur-sm p-4 rounded-lg border border-purple-500">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-purple-400 font-bold">{selectedAccessory.nombre}</h3>
+            <span className={`text-sm font-bold ${getRarityColor(selectedAccessory.rareza)}`}>
+              {getRarityIcon(selectedAccessory.rareza)} {selectedAccessory.rareza.toUpperCase()}
+            </span>
+          </div>
+          <p className="text-gray-300 text-sm mb-3">{selectedAccessory.descripcion}</p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => handlePreview(selectedAccessory)}
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded font-bold transition-all text-sm"
+            >
+              👁️ Preview
+            </button>
+            <button
+              onClick={() => handleBuy(selectedAccessory)}
+              className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded font-bold transition-all text-sm"
+            >
+              💰 Comprar {selectedAccessory.precio} 💰
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 } 
