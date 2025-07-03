@@ -6,12 +6,12 @@ import { jwtDecode } from 'jwt-decode'
 import CharacterViewer3D from '@/components/CharacterViewer3D'
 
 const personajesJJK = [
-  { id: 'gojo', nombre: 'Satoru Gojo', avatar: '/avatars/avatar-gojo.png', descripcion: 'El más fuerte de todos los hechiceros', auraColor: '#3b82f6' },
-  { id: 'yuji', nombre: 'Yuji Itadori', avatar: '/avatars/avatar-itadori.png', descripcion: 'Estudiante con potencial excepcional', auraColor: '#ef4444' },
-  { id: 'megumi', nombre: 'Megumi Fushiguro', avatar: '/avatars/avatar-megumi.png', descripcion: 'Maestro de las sombras', auraColor: '#1f2937' },
-  { id: 'nobara', nombre: 'Nobara Kugisaki', avatar: '/avatars/avatar-nobara.png', descripcion: 'Especialista en maldiciones', auraColor: '#ec4899' },
-  { id: 'yuta', nombre: 'Yuta Okkotsu', avatar: '/avatars/avatar-yuta.png', descripcion: 'El sucesor de Gojo', auraColor: '#10b981' },
-  { id: 'nanami', nombre: 'Kento Nanami', avatar: '/avatars/avatar-nanami.png', descripcion: 'Hechicero experimentado', auraColor: '#f59e0b' },
+  { id: 'gojo', nombre: 'Satoru Gojo', avatar: '/avatars/avatar-gojo.png', descripcion: 'El más fuerte de todos los hechiceros', auraColor: '#3b82f6', sketchfab: 'https://sketchfab.com/models/1cf90882c2e64074ab62d766ad77d6c4/embed', sketchfabPerfil: 'https://sketchfab.com/models/efdf29937c5b4c9086b7c9bbf5a58976/embed' },
+  { id: 'yuji', nombre: 'Yuji Itadori', avatar: '/avatars/avatar-itadori.png', descripcion: 'Estudiante con potencial excepcional', auraColor: '#ef4444', sketchfab: 'https://sketchfab.com/models/8ae59b5a207041999f30b54813d19106/embed', sketchfabPerfil: 'https://sketchfab.com/models/dc1bba29ad134f6a8ffe5a7e1c2a92b8/embed' },
+  { id: 'megumi', nombre: 'Megumi Fushiguro', avatar: '/avatars/avatar-megumi.png', descripcion: 'Maestro de las sombras', auraColor: '#1f2937', sketchfab: 'https://sketchfab.com/models/b4073ce4c95c4e46abf3825a0207eaf8/embed', sketchfabPerfil: 'https://sketchfab.com/models/cffc0f3efa364a5ba114bfbbb7e2ec9c/embed' },
+  { id: 'nobara', nombre: 'Nobara Kugisaki', avatar: '/avatars/avatar-nobara.png', descripcion: 'Especialista en maldiciones', auraColor: '#ec4899', sketchfab: 'https://sketchfab.com/models/d9ceed236ec1482cabdf293bb1aae573/embed' },
+  { id: 'yuta', nombre: 'Yuta Okkotsu', avatar: '/avatars/avatar-yuta.png', descripcion: 'El sucesor de Gojo', auraColor: '#10b981', sketchfab: 'https://sketchfab.com/models/24f9ddc6d6124095a7989188ac28254f/embed' },
+  { id: 'geto', nombre: 'Suguru Geto', avatar: '/avatars/avatar-guardian.png', descripcion: 'Maestro de las técnicas de maldición y control de espíritus.', auraColor: '#8b5cf6', sketchfab: 'https://sketchfab.com/models/b8109dde1ac04b87b76eaa984a60cafc/embed' },
 ]
 
 export default function PerfilEstudiante() {
@@ -46,9 +46,9 @@ export default function PerfilEstudiante() {
         
         // Configurar personaje seleccionado
         if (data.usuario.personaje) {
-          const personaje = personajesJJK.find(p => p.id === data.usuario.personaje.nombre?.toLowerCase())
-          if (personaje) {
-            setPersonajeSeleccionado(personaje)
+          const personajeEncontrado = personajesJJK.find(p => p.nombre === data.usuario.personaje.nombre)
+          if (personajeEncontrado) {
+            setPersonajeSeleccionado(personajeEncontrado)
           }
         }
         
@@ -265,13 +265,20 @@ export default function PerfilEstudiante() {
                   🎭 Tu Personaje
                 </h3>
                 {personajeSeleccionado ? (
-                  <CharacterViewer3D
-                    character={personajeSeleccionado}
-                    accessories={equippedAccessories}
-                    onAccessoryClick={(accessory) => {
-                      console.log('Accesorio clickeado:', accessory)
-                    }}
-                  />
+                  <iframe
+                    title={personajeSeleccionado.nombre}
+                    src={
+                      (personajeSeleccionado.sketchfabPerfil || personajeSeleccionado.sketchfab) +
+                      ((personajeSeleccionado.sketchfabPerfil || personajeSeleccionado.sketchfab).includes('?') ? '&' : '?') +
+                      'autostart=1&ui_infos=0&ui_controls=0&ui_watermark=0'
+                    }
+                    frameBorder="0"
+                    allow="autoplay; fullscreen; xr-spatial-tracking"
+                    mozallowfullscreen="true"
+                    webkitallowfullscreen="true"
+                    allowFullScreen
+                    style={{ width: '100%', height: '500px', border: 'none', borderRadius: '16px', background: 'transparent' }}
+                  ></iframe>
                 ) : (
                   <div className="text-center py-12">
                     <p className="text-gray-400 mb-4">No has seleccionado un personaje aún</p>

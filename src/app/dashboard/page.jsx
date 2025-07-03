@@ -7,6 +7,7 @@ import UsuariosPorNivelChart from '@/components/UsuariosPorNivelChart'
 import Link from 'next/link'
 import { useAuth } from '@/hooks/useClient'
 import { useRouter } from 'next/navigation'
+import PWAInstaller from '@/components/PWAInstaller'
 
 export default function DashboardPage() {
   const { isAuthenticated, isClient } = useAuth()
@@ -202,363 +203,366 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-purple-950 to-black p-6 text-white">
-      <div className="max-w-7xl mx-auto">
-        {/* Enhanced Header */}
-        <motion.div
-          initial={{ y: -50, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          className="text-center mb-12"
-        >
-          <h1 className="text-5xl font-extrabold text-gradient mb-4 drop-shadow-2xl">
-            📊 Panel del Profesor
-          </h1>
-          <p className="text-xl text-purple-300">
-            Gestiona tu academia de hechiceros
-          </p>
-        </motion.div>
-
-        {/* Enhanced Statistics */}
-        <motion.div
-          initial={{ y: 50, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8"
-        >
-          {[
-            { icon: '👥', number: stats.totalUsuarios, label: 'Total Estudiantes', color: 'purple' },
-            { icon: '⚔️', number: stats.totalMisiones, label: 'Misiones Disponibles', color: 'yellow' },
-            { icon: '📈', number: stats.promedioNivel, label: 'Nivel Promedio', color: 'green' },
-            { icon: '🔥', number: stats.usuariosActivos, label: 'Estudiantes Activos', color: 'red' },
-            { icon: '🏆', number: stats.misionesCompletadas, label: 'Misiones Completadas', color: 'blue' },
-            { icon: '⚡', number: stats.experienciaTotal, label: 'Experiencia Total', color: 'purple' }
-          ].map((stat, index) => (
-            <motion.div
-              key={index}
-              whileHover={{ scale: 1.05 }}
-              className={`glass-dark p-6 rounded-xl border border-${stat.color}-500/30 hover-lift`}
-            >
-              <div className="text-4xl mb-3">{stat.icon}</div>
-              <h3 className={`text-3xl font-bold text-${stat.color}-400 mb-2`}>{stat.number}</h3>
-              <p className="text-gray-400 font-medium">{stat.label}</p>
-            </motion.div>
-          ))}
-        </motion.div>
-
-        {/* Enhanced Search Bar */}
-        <motion.div
-          initial={{ y: 30, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.4 }}
-          className="mb-8"
-        >
-          <div className="relative max-w-md mx-auto">
-            <input
-              type="text"
-              placeholder="🔍 Buscar estudiante o email..."
-              value={filtro}
-              onChange={(e) => setFiltro(e.target.value)}
-              className="w-full px-4 py-3 pl-12 rounded-lg glass-dark border border-purple-500/30 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-white placeholder-gray-400 transition-all duration-300"
-            />
-            <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-              🔍
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Enhanced Mission Assignment Section */}
-        <motion.div
-          initial={{ y: 30, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.6 }}
-          className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8"
-        >
-          {/* User Selection */}
-          <div className="glass-dark p-6 rounded-xl border border-purple-500/30">
-            <h3 className="text-2xl font-bold text-gradient mb-4">👤 Seleccionar Estudiante</h3>
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {usuariosFiltrados.map((usuario) => (
-                <motion.div
-                  key={usuario._id}
-                  whileHover={{ scale: 1.02 }}
-                  onClick={() => setSelectedUser(usuario)}
-                  className={`p-4 rounded-lg cursor-pointer transition-all duration-300 ${
-                    selectedUser?._id === usuario._id
-                      ? 'bg-purple-600/30 border-2 border-purple-500'
-                      : 'bg-black/30 border-2 border-transparent hover:border-purple-500/50'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-semibold text-white">{usuario.nombre}</h4>
-                      <p className="text-sm text-gray-400">{usuario.email}</p>
-                      <div className="flex items-center gap-4 mt-2">
-                        <span className="text-sm text-purple-400">Nivel {usuario.nivel}</span>
-                        <span className="text-sm text-yellow-400">{usuario.experiencia} XP</span>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-2xl">{usuario.personaje?.avatar || '👤'}</div>
-                    </div>
-                  </div>
-                  <div className="mt-3">
-                    <XPBar experiencia={usuario.experiencia} nivel={usuario.nivel} />
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-
-          {/* Mission Selection */}
-          <div className="glass-dark p-6 rounded-xl border border-yellow-500/30">
-            <h3 className="text-2xl font-bold text-gradient mb-4">⚔️ Seleccionar Misión</h3>
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {Array.isArray(misiones) ? misiones.map((mision) => (
-                <motion.div
-                  key={mision._id}
-                  whileHover={{ scale: 1.02 }}
-                  onClick={() => setSelectedMission(mision)}
-                  className={`p-4 rounded-lg cursor-pointer transition-all duration-300 ${
-                    selectedMission?._id === mision._id
-                      ? 'bg-yellow-600/30 border-2 border-yellow-500'
-                      : 'bg-black/30 border-2 border-transparent hover:border-yellow-500/50'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-semibold text-white">{mision.titulo}</h4>
-                      <p className="text-sm text-gray-400">{mision.descripcion}</p>
-                      <div className="flex items-center gap-4 mt-2">
-                        <span className="text-sm text-yellow-400">{mision.experiencia} XP</span>
-                        <span className="text-sm text-purple-400">Dificultad: {mision.dificultad}</span>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-2xl">⚔️</div>
-                    </div>
-                  </div>
-                </motion.div>
-              )) : (
-                <div className="text-center text-gray-400 py-4">
-                  No hay misiones disponibles
-                </div>
-              )}
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Assignment Button */}
-        <motion.div
-          initial={{ y: 30, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.8 }}
-          className="text-center mb-8"
-        >
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => asignarMision(selectedUser?._id, selectedMission?._id)}
-            disabled={!selectedUser || !selectedMission}
-            className={`px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 ${
-              selectedUser && selectedMission
-                ? 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 shadow-jjk-lg'
-                : 'bg-gray-600 cursor-not-allowed opacity-50'
-            }`}
+    <>
+      <div className="min-h-screen bg-gradient-to-br from-black via-purple-950 to-black p-6 text-white">
+        <div className="max-w-7xl mx-auto">
+          {/* Enhanced Header */}
+          <motion.div
+            initial={{ y: -50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className="text-center mb-12"
           >
-            {selectedUser && selectedMission ? (
-              `🎯 Asignar misión a ${selectedUser.nombre}`
-            ) : (
-              'Selecciona un estudiante y una misión'
-            )}
-          </motion.button>
-        </motion.div>
+            <h1 className="text-5xl font-extrabold text-gradient mb-4 drop-shadow-2xl">
+              📊 Panel del Profesor
+            </h1>
+            <p className="text-xl text-purple-300">
+              Gestiona tu academia de hechiceros
+            </p>
+          </motion.div>
 
-        {/* Enhanced Charts Section */}
-        <motion.div
-          initial={{ y: 30, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 1.0 }}
-          className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8"
-        >
-          <div className="glass-dark p-6 rounded-xl border border-purple-500/30">
-            <h3 className="text-2xl font-bold text-gradient mb-4">📊 Distribución por Nivel</h3>
-            <UsuariosPorNivelChart usuarios={usuarios} />
-          </div>
-          
-          <div className="glass-dark p-6 rounded-xl border border-yellow-500/30">
-            <h3 className="text-2xl font-bold text-gradient mb-4">🏆 Top Estudiantes</h3>
-            <div className="space-y-3">
-              {Array.isArray(usuarios) ? usuarios
-                .sort((a, b) => b.experiencia - a.experiencia)
-                .slice(0, 5)
-                .map((usuario, index) => (
+          {/* Enhanced Statistics */}
+          <motion.div
+            initial={{ y: 50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.2 }}
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8"
+          >
+            {[
+              { icon: '👥', number: stats.totalUsuarios, label: 'Total Estudiantes', color: 'purple' },
+              { icon: '⚔️', number: stats.totalMisiones, label: 'Misiones Disponibles', color: 'yellow' },
+              { icon: '📈', number: stats.promedioNivel, label: 'Nivel Promedio', color: 'green' },
+              { icon: '🔥', number: stats.usuariosActivos, label: 'Estudiantes Activos', color: 'red' },
+              { icon: '🏆', number: stats.misionesCompletadas, label: 'Misiones Completadas', color: 'blue' },
+              { icon: '⚡', number: stats.experienciaTotal, label: 'Experiencia Total', color: 'purple' }
+            ].map((stat, index) => (
+              <motion.div
+                key={index}
+                whileHover={{ scale: 1.05 }}
+                className={`glass-dark p-6 rounded-xl border border-${stat.color}-500/30 hover-lift`}
+              >
+                <div className="text-4xl mb-3">{stat.icon}</div>
+                <h3 className={`text-3xl font-bold text-${stat.color}-400 mb-2`}>{stat.number}</h3>
+                <p className="text-gray-400 font-medium">{stat.label}</p>
+              </motion.div>
+            ))}
+          </motion.div>
+
+          {/* Enhanced Search Bar */}
+          <motion.div
+            initial={{ y: 30, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.4 }}
+            className="mb-8"
+          >
+            <div className="relative max-w-md mx-auto">
+              <input
+                type="text"
+                placeholder="🔍 Buscar estudiante o email..."
+                value={filtro}
+                onChange={(e) => setFiltro(e.target.value)}
+                className="w-full px-4 py-3 pl-12 rounded-lg glass-dark border border-purple-500/30 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-white placeholder-gray-400 transition-all duration-300"
+              />
+              <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                🔍
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Enhanced Mission Assignment Section */}
+          <motion.div
+            initial={{ y: 30, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.6 }}
+            className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8"
+          >
+            {/* User Selection */}
+            <div className="glass-dark p-6 rounded-xl border border-purple-500/30">
+              <h3 className="text-2xl font-bold text-gradient mb-4">👤 Seleccionar Estudiante</h3>
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {usuariosFiltrados.map((usuario) => (
                   <motion.div
                     key={usuario._id}
-                    initial={{ x: -20, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    transition={{ delay: index * 0.1 }}
-                    className="flex items-center justify-between p-3 bg-black/30 rounded-lg"
+                    whileHover={{ scale: 1.02 }}
+                    onClick={() => setSelectedUser(usuario)}
+                    className={`p-4 rounded-lg cursor-pointer transition-all duration-300 ${
+                      selectedUser?._id === usuario._id
+                        ? 'bg-purple-600/30 border-2 border-purple-500'
+                        : 'bg-black/30 border-2 border-transparent hover:border-purple-500/50'
+                    }`}
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="text-2xl">
-                        {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`}
-                      </div>
+                    <div className="flex items-center justify-between">
                       <div>
                         <h4 className="font-semibold text-white">{usuario.nombre}</h4>
-                        <p className="text-sm text-gray-400">Nivel {usuario.nivel}</p>
+                        <p className="text-sm text-gray-400">{usuario.email}</p>
+                        <div className="flex items-center gap-4 mt-2">
+                          <span className="text-sm text-purple-400">Nivel {usuario.nivel}</span>
+                          <span className="text-sm text-yellow-400">{usuario.experiencia} XP</span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-2xl">{usuario.personaje?.avatar || '👤'}</div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="text-lg font-bold text-yellow-400">{usuario.experiencia} XP</div>
+                    <div className="mt-3">
+                      <XPBar experiencia={usuario.experiencia} nivel={usuario.nivel} />
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+
+            {/* Mission Selection */}
+            <div className="glass-dark p-6 rounded-xl border border-yellow-500/30">
+              <h3 className="text-2xl font-bold text-gradient mb-4">⚔️ Seleccionar Misión</h3>
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {Array.isArray(misiones) ? misiones.map((mision) => (
+                  <motion.div
+                    key={mision._id}
+                    whileHover={{ scale: 1.02 }}
+                    onClick={() => setSelectedMission(mision)}
+                    className={`p-4 rounded-lg cursor-pointer transition-all duration-300 ${
+                      selectedMission?._id === mision._id
+                        ? 'bg-yellow-600/30 border-2 border-yellow-500'
+                        : 'bg-black/30 border-2 border-transparent hover:border-yellow-500/50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-semibold text-white">{mision.titulo}</h4>
+                        <p className="text-sm text-gray-400">{mision.descripcion}</p>
+                        <div className="flex items-center gap-4 mt-2">
+                          <span className="text-sm text-yellow-400">{mision.experiencia} XP</span>
+                          <span className="text-sm text-purple-400">Dificultad: {mision.dificultad}</span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-2xl">⚔️</div>
+                      </div>
                     </div>
                   </motion.div>
                 )) : (
                   <div className="text-center text-gray-400 py-4">
-                    No hay datos disponibles
+                    No hay misiones disponibles
                   </div>
                 )}
+              </div>
             </div>
-          </div>
-        </motion.div>
+          </motion.div>
 
-        {/* Quick Actions */}
-        <motion.div
-          initial={{ y: 30, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 1.2 }}
-          className="text-center"
-        >
-          <h3 className="text-2xl font-bold text-gradient mb-6">⚡ Acciones Rápidas</h3>
-          <div className="flex flex-wrap justify-center gap-4">
-            <Link href="/perfil/profesor/crear-clase">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 rounded-lg font-semibold transition-all duration-300 shadow-jjk"
-              >
-                🏫 Crear Clase
-              </motion.button>
-            </Link>
-            
-            <Link href="/perfil/profesor/calificar">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 rounded-lg font-semibold transition-all duration-300 shadow-jjk"
-              >
-                📝 Calificar
-              </motion.button>
-            </Link>
-            
-            <Link href="/ranking">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="px-6 py-3 bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800 rounded-lg font-semibold transition-all duration-300 shadow-jjk"
-              >
-                🏆 Ver Ranking
-              </motion.button>
-            </Link>
-            
-            <Link href="/misiones">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 rounded-lg font-semibold transition-all duration-300 shadow-jjk"
-              >
-                ⚔️ Gestionar Misiones
-              </motion.button>
-            </Link>
-          </div>
-        </motion.div>
-
-        {/* Enhanced Navigation Cards */}
-        <motion.div
-          initial={{ y: 30, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 1.2 }}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8"
-        >
-          {[
-            { 
-              title: '🎯 Misiones', 
-              description: 'Explora y completa misiones épicas',
-              href: '/misiones',
-              color: 'purple',
-              icon: '🎯'
-            },
-            { 
-              title: '🏆 Ranking', 
-              description: 'Ve cómo te posicionas entre otros hechiceros',
-              href: '/ranking',
-              color: 'yellow',
-              icon: '🏆'
-            },
-            { 
-              title: '👤 Perfil', 
-              description: 'Gestiona tu personaje y progreso',
-              href: '/perfil',
-              color: 'blue',
-              icon: '👤'
-            },
-            { 
-              title: '🛍️ Tienda', 
-              description: 'Compra accesorios y mejoras',
-              href: '/perfil/estudiante/tienda',
-              color: 'green',
-              icon: '🛍️'
-            },
-            { 
-              title: '⚔️ Combate 3D', 
-              description: 'Entrena en combates épicos',
-              href: '/combate',
-              color: 'red',
-              icon: '⚔️'
-            },
-            { 
-              title: '🏰 Clanes', 
-              description: 'Únete a clanes y forma alianzas',
-              href: '/clanes',
-              color: 'purple',
-              icon: '🏰'
-            },
-            { 
-              title: '🎉 Eventos', 
-              description: 'Participa en eventos especiales',
-              href: '/eventos',
-              color: 'yellow',
-              icon: '🎉'
-            },
-            { 
-              title: '🤖 IA Recomendaciones', 
-              description: 'Recibe sugerencias personalizadas',
-              href: '/ai-recomendaciones',
-              color: 'cyan',
-              icon: '🤖'
-            },
-            { 
-              title: '📊 Analytics', 
-              description: 'Analiza tu progreso detallado',
-              href: '/analytics',
-              color: 'blue',
-              icon: '📊'
-            }
-          ].map((card, index) => (
-            <motion.div
-              key={card.title}
+          {/* Assignment Button */}
+          <motion.div
+            initial={{ y: 30, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.8 }}
+            className="text-center mb-8"
+          >
+            <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => router.push(card.href)}
-              className={`glass-dark p-6 rounded-xl border border-${card.color}-500/30 hover-lift cursor-pointer`}
+              onClick={() => asignarMision(selectedUser?._id, selectedMission?._id)}
+              disabled={!selectedUser || !selectedMission}
+              className={`px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 ${
+                selectedUser && selectedMission
+                  ? 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 shadow-jjk-lg'
+                  : 'bg-gray-600 cursor-not-allowed opacity-50'
+              }`}
             >
-              <div className="text-4xl mb-4">{card.icon}</div>
-              <h3 className={`text-xl font-bold text-${card.color}-400 mb-2`}>{card.title}</h3>
-              <p className="text-gray-400 text-sm">{card.description}</p>
-            </motion.div>
-          ))}
-        </motion.div>
+              {selectedUser && selectedMission ? (
+                `🎯 Asignar misión a ${selectedUser.nombre}`
+              ) : (
+                'Selecciona un estudiante y una misión'
+              )}
+            </motion.button>
+          </motion.div>
+
+          {/* Enhanced Charts Section */}
+          <motion.div
+            initial={{ y: 30, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 1.0 }}
+            className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8"
+          >
+            <div className="glass-dark p-6 rounded-xl border border-purple-500/30">
+              <h3 className="text-2xl font-bold text-gradient mb-4">📊 Distribución por Nivel</h3>
+              <UsuariosPorNivelChart usuarios={usuarios} />
+            </div>
+            
+            <div className="glass-dark p-6 rounded-xl border border-yellow-500/30">
+              <h3 className="text-2xl font-bold text-gradient mb-4">🏆 Top Estudiantes</h3>
+              <div className="space-y-3">
+                {Array.isArray(usuarios) ? usuarios
+                  .sort((a, b) => b.experiencia - a.experiencia)
+                  .slice(0, 5)
+                  .map((usuario, index) => (
+                    <motion.div
+                      key={usuario._id}
+                      initial={{ x: -20, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      transition={{ delay: index * 0.1 }}
+                      className="flex items-center justify-between p-3 bg-black/30 rounded-lg"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="text-2xl">
+                          {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`}
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-white">{usuario.nombre}</h4>
+                          <p className="text-sm text-gray-400">Nivel {usuario.nivel}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-lg font-bold text-yellow-400">{usuario.experiencia} XP</div>
+                      </div>
+                    </motion.div>
+                  )) : (
+                    <div className="text-center text-gray-400 py-4">
+                      No hay datos disponibles
+                    </div>
+                  )}
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Quick Actions */}
+          <motion.div
+            initial={{ y: 30, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 1.2 }}
+            className="text-center"
+          >
+            <h3 className="text-2xl font-bold text-gradient mb-6">⚡ Acciones Rápidas</h3>
+            <div className="flex flex-wrap justify-center gap-4">
+              <Link href="/perfil/profesor/crear-clase">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 rounded-lg font-semibold transition-all duration-300 shadow-jjk"
+                >
+                  🏫 Crear Clase
+                </motion.button>
+              </Link>
+              
+              <Link href="/perfil/profesor/calificar">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 rounded-lg font-semibold transition-all duration-300 shadow-jjk"
+                >
+                  📝 Calificar
+                </motion.button>
+              </Link>
+              
+              <Link href="/ranking">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="px-6 py-3 bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800 rounded-lg font-semibold transition-all duration-300 shadow-jjk"
+                >
+                  🏆 Ver Ranking
+                </motion.button>
+              </Link>
+              
+              <Link href="/misiones">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 rounded-lg font-semibold transition-all duration-300 shadow-jjk"
+                >
+                  ⚔️ Gestionar Misiones
+                </motion.button>
+              </Link>
+            </div>
+          </motion.div>
+
+          {/* Enhanced Navigation Cards */}
+          <motion.div
+            initial={{ y: 30, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 1.2 }}
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8"
+          >
+            {[
+              { 
+                title: '🎯 Misiones', 
+                description: 'Explora y completa misiones épicas',
+                href: '/misiones',
+                color: 'purple',
+                icon: '🎯'
+              },
+              { 
+                title: '🏆 Ranking', 
+                description: 'Ve cómo te posicionas entre otros hechiceros',
+                href: '/ranking',
+                color: 'yellow',
+                icon: '🏆'
+              },
+              { 
+                title: '👤 Perfil', 
+                description: 'Gestiona tu personaje y progreso',
+                href: '/perfil',
+                color: 'blue',
+                icon: '👤'
+              },
+              { 
+                title: '🛍️ Tienda', 
+                description: 'Compra accesorios y mejoras',
+                href: '/perfil/estudiante/tienda',
+                color: 'green',
+                icon: '🛍️'
+              },
+              { 
+                title: '⚔️ Combate 3D', 
+                description: 'Entrena en combates épicos',
+                href: '/combate',
+                color: 'red',
+                icon: '⚔️'
+              },
+              { 
+                title: '🏰 Clanes', 
+                description: 'Únete a clanes y forma alianzas',
+                href: '/clanes',
+                color: 'purple',
+                icon: '🏰'
+              },
+              { 
+                title: '🎉 Eventos', 
+                description: 'Participa en eventos especiales',
+                href: '/eventos',
+                color: 'yellow',
+                icon: '🎉'
+              },
+              { 
+                title: '🤖 IA Recomendaciones', 
+                description: 'Recibe sugerencias personalizadas',
+                href: '/ai-recomendaciones',
+                color: 'cyan',
+                icon: '🤖'
+              },
+              { 
+                title: '📊 Analytics', 
+                description: 'Analiza tu progreso detallado',
+                href: '/analytics',
+                color: 'blue',
+                icon: '📊'
+              }
+            ].map((card, index) => (
+              <motion.div
+                key={card.title}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => router.push(card.href)}
+                className={`glass-dark p-6 rounded-xl border border-${card.color}-500/30 hover-lift cursor-pointer`}
+              >
+                <div className="text-4xl mb-4">{card.icon}</div>
+                <h3 className={`text-xl font-bold text-${card.color}-400 mb-2`}>{card.title}</h3>
+                <p className="text-gray-400 text-sm">{card.description}</p>
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
       </div>
-    </div>
+      <PWAInstaller />
+    </>
   )
 }
 

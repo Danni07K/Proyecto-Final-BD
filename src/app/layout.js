@@ -45,7 +45,7 @@ export default function RootLayout({ children }) {
         {/* Sistemas globales */}
         <AudioSystem3D />
         <AchievementSystem />
-        <PWAInstaller />
+        {/* <PWAInstaller /> */}
         
         {/* Toast notifications */}
         <Toaster

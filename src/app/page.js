@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/hooks/useClient'
+import PWAInstaller from '@/components/PWAInstaller'
 
 export default function Home() {
   const inscribeteRef = useRef(null)
@@ -309,6 +310,7 @@ export default function Home() {
           </motion.div>
         </motion.div>
       </main>
+      <PWAInstaller />
     </div>
   )
 }
