@@ -1,14 +1,16 @@
 "use client";
 import { useEffect, useState, useRef } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import { io } from 'socket.io-client';
 import useSound from 'use-sound';
+import { jwtDecode } from 'jwt-decode';
 
 const SOCKET_URL = typeof window !== 'undefined' ? window.location.origin : '';
 
 export default function LobbyClase() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const classId = searchParams.get('classId');
   const [estudiantes, setEstudiantes] = useState([]);
@@ -21,13 +23,38 @@ export default function LobbyClase() {
   const [socketConnected, setSocketConnected] = useState(true);
   const [playJoin] = useSound('/sounds/energia-maldita.mp3', { volume: 0.3 });
   const [playLeave] = useSound('/sounds/energia-maldita.mp3', { volume: 0.15 });
+  const [user, setUser] = useState(null);
 
-  // Demo: obtener datos del usuario y clase (reemplazar por lógica real)
-  const user = {
-    nombre: 'Tú', // TODO: reemplazar por el nombre real del usuario
-    avatar: '/avatars/avatar-megumi.png', // TODO: avatar real
-    personaje: 'Megumi Fushiguro', // TODO: personaje real
-  };
+  // Validar que el usuario tenga personaje antes de mostrar el lobby
+  useEffect(() => {
+    async function checkUserPersonaje() {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        router.push('/login');
+        return;
+      }
+      const payload = jwtDecode(token);
+      const res = await fetch(`/api/usuarios/${payload.id}`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUser({
+          nombre: data?.usuario?.nombre,
+          avatar: data?.usuario?.personaje?.avatar || '/avatars/avatar-megumi.png',
+          personaje: data?.usuario?.personaje?.nombre
+        });
+        if (!data?.usuario?.personaje) {
+          toast.error('Debes seleccionar un personaje antes de entrar al lobby');
+          setTimeout(() => router.push('/escoger-personaje'), 1500);
+        }
+      } else {
+        router.push('/login');
+      }
+    }
+    checkUserPersonaje();
+  }, [router]);
 
   // Conexión socket.io
   useEffect(() => {
@@ -122,7 +149,16 @@ export default function LobbyClase() {
   }, [estudiantes.length]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-purple-950 to-black flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-black via-purple-950 to-black flex flex-col items-center justify-center p-4 relative">
+      {/* Botón Ver mi perfil */}
+      <button
+        onClick={() => router.push('/perfil/estudiante')}
+        className="absolute top-6 right-6 z-30 bg-gradient-to-r from-purple-700 to-pink-600 hover:from-purple-800 hover:to-pink-700 text-white px-5 py-3 rounded-full font-bold shadow-lg flex items-center gap-2 border-2 border-purple-400 transition-all"
+        title="Ver mi perfil"
+      >
+        <span className="text-2xl">👤</span>
+        <span>Ver mi perfil</span>
+      </button>
       {!socketConnected && (
         <div className="mb-4 p-4 bg-red-900/80 border border-red-500 text-red-200 rounded-lg animate-pulse-glow text-center font-bold">
           ❌ Conexión perdida. Intentando reconectar...
@@ -139,16 +175,16 @@ export default function LobbyClase() {
             👥 Estudiantes Conectados
           </h2>
           <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 max-h-96 overflow-y-auto pr-2">
-            {estudiantes.map((est, i) => (
+            {estudiantes.filter(Boolean).map((est, i) => (
               <motion.div
                 key={i}
                 whileHover={{ scale: 1.05 }}
                 className="bg-gradient-to-br from-purple-900/80 to-black/80 rounded-xl p-2 flex flex-col items-center border-2 border-purple-600 shadow-lg relative min-w-[90px]"
               >
                 <span className="absolute top-1 right-1 animate-pulse-glow bg-green-500 w-3 h-3 rounded-full border-2 border-white shadow-lg" title="Conectado"></span>
-                <img src={est.avatar} alt={est.personaje} className="w-12 h-12 rounded-full border-2 border-yellow-400 mb-1 shadow-xl" />
-                <div className="text-xs font-bold text-white text-center break-words max-w-[70px]">{est.nombre}</div>
-                <div className="text-purple-300 text-[10px] text-center">{est.personaje}</div>
+                <img src={est?.avatar || '/avatars/avatar-itadori.png'} alt={est?.personaje || 'Sin personaje'} className="w-12 h-12 rounded-full border-2 border-yellow-400 mb-1 shadow-xl" />
+                <div className="text-xs font-bold text-white text-center break-words max-w-[70px]">{est?.nombre || 'Sin nombre'}</div>
+                <div className="text-purple-300 text-[10px] text-center">{est?.personaje || 'Sin personaje'}</div>
               </motion.div>
             ))}
           </div>

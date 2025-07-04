@@ -1,14 +1,42 @@
 'use client'
 import CharacterSelector3D from '@/components/CharacterSelector3D'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { toast } from 'react-hot-toast'
+import { jwtDecode } from 'jwt-decode'
 
 export default function EscogerPersonaje() {
   const router = useRouter()
   const [selectedCharacter, setSelectedCharacter] = useState(null)
   const [isConfirming, setIsConfirming] = useState(false)
+
+  // Validar que el usuario tenga clase asignada antes de permitir seleccionar personaje
+  useEffect(() => {
+    async function checkUserClass() {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        router.push('/login');
+        return;
+      }
+      const payload = jwtDecode(token);
+      const res = await fetch(`/api/usuarios/${payload.id}`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (!data?.usuario?.clase?._id) {
+          toast.error('Debes unirte a una clase antes de seleccionar personaje');
+          setTimeout(() => router.push('/perfil/estudiante/unirse-clase'), 1500);
+        }
+      } else {
+        toast.error('Error al verificar tu clase');
+        setTimeout(() => router.push('/login'), 1500);
+      }
+    }
+    checkUserClass();
+  }, [router]);
 
   const handleCharacterSelect = (character) => {
     setSelectedCharacter(character)
@@ -29,7 +57,7 @@ export default function EscogerPersonaje() {
         router.push('/login')
         return
       }
-
+      const payload = jwtDecode(token);
       // Aquí harías el POST al backend con el personaje seleccionado
       const response = await fetch('/api/usuarios/personaje', {
         method: 'POST',
@@ -45,7 +73,24 @@ export default function EscogerPersonaje() {
 
       if (response.ok) {
         toast.success(`¡Has elegido a ${selectedCharacter.name}!`)
-        router.push('/clase/lobby')
+        // Forzar refetch del usuario antes de redirigir al lobby
+        const userRes = await fetch(`/api/usuarios/${payload.id}`, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        })
+        let classId = null;
+        if (userRes.ok) {
+          const userData = await userRes.json();
+          classId = userData?.usuario?.clase?._id;
+        }
+        if (classId) {
+          setTimeout(() => router.push(`/clases/lobby?classId=${classId}`), 500);
+        } else {
+          toast.error('No se pudo obtener la clase del usuario');
+          setTimeout(() => router.push('/perfil/estudiante'), 1500);
+        }
       } else {
         const error = await response.json()
         toast.error(error.error || 'Error al seleccionar personaje')

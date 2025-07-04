@@ -120,6 +120,18 @@ export default function PerfilEstudiante() {
     }
   }
 
+  // Forzar refetch del usuario cuando se vuelve a este perfil (por ejemplo, tras unirse a clase o seleccionar personaje)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        setIsLoading(true);
+        setTimeout(() => window.location.reload(), 200); // Recarga suave para asegurar estado actualizado
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-black via-purple-950 to-black flex items-center justify-center">
@@ -294,81 +306,147 @@ export default function PerfilEstudiante() {
             </motion.div>
           </motion.div>
 
-          {/* Acciones rápidas */}
-          <motion.div
-            initial={{ y: 30, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.6 }}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12"
-          >
-            {/* Tienda */}
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => router.push('/perfil/estudiante/tienda')}
-              className="glass-dark p-6 rounded-xl border border-purple-600 shadow-jjk-lg hover:shadow-purple-500/20 transition-all cursor-pointer hover-lift"
-            >
-              <div className="text-center">
-                <div className="text-4xl mb-4">🛍️</div>
-                <h3 className="text-xl font-bold text-purple-400 mb-2">Tienda de Accesorios</h3>
-                <p className="text-gray-300 text-sm mb-4">
-                  Compra accesorios únicos con tus monedas
-                </p>
-                <div className="bg-yellow-900/30 p-3 rounded-lg border border-yellow-500">
-                  <p className="text-lg font-bold text-yellow-400">{user?.monedas || 0}</p>
-                  <p className="text-xs text-gray-400">Monedas disponibles</p>
-                </div>
-              </div>
-            </motion.div>
+          {/* Acciones rápidas y secciones avanzadas solo si el usuario tiene clase y personaje */}
+          {user?.clase && user?.clase._id && user?.personaje ? (
+            <>
+              {/* Información de la clase */}
+              <motion.div className="glass-dark p-6 rounded-xl border border-blue-500 shadow-jjk-lg mb-8">
+                <h3 className="text-2xl font-bold text-blue-400 mb-2">🏫 Información de la Clase</h3>
+                <div className="text-lg text-white mb-1">Nombre: <span className="text-blue-200 font-bold">{user.clase.nombre}</span></div>
+                <div className="text-lg text-white mb-1">Código: <span className="text-blue-200 font-bold">{user.clase.codigo || 'N/A'}</span></div>
+                <div className="text-lg text-white mb-1">Profesor: <span className="text-blue-200 font-bold">{user.clase.profesor?.nombre || 'N/A'}</span></div>
+              </motion.div>
 
-            {/* Ranking */}
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => router.push('/ranking')}
-              className="glass-dark p-6 rounded-xl border border-purple-600 shadow-jjk-lg hover:shadow-purple-500/20 transition-all cursor-pointer hover-lift"
-            >
-              <div className="text-center">
-                <div className="text-4xl mb-4">🏆</div>
-                <h3 className="text-xl font-bold text-purple-400 mb-2">Ranking</h3>
-                <p className="text-gray-300 text-sm">
-                  Compite con otros hechiceros
-                </p>
-              </div>
-            </motion.div>
+              {/* Acciones rápidas */}
+              <motion.div
+                initial={{ y: 30, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.6 }}
+                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12"
+              >
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => router.push('/perfil/estudiante/tienda')}
+                  className="glass-dark p-6 rounded-xl border border-yellow-600 shadow-jjk-lg hover:shadow-yellow-500/20 transition-all cursor-pointer hover-lift"
+                >
+                  <div className="text-center">
+                    <div className="text-4xl mb-4">🛍️</div>
+                    <h3 className="text-xl font-bold text-yellow-400 mb-2">Tienda de Accesorios</h3>
+                    <p className="text-gray-300 text-sm mb-4">Compra accesorios únicos con tus monedas</p>
+                  </div>
+                </motion.div>
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => router.push('/ranking')}
+                  className="glass-dark p-6 rounded-xl border border-purple-600 shadow-jjk-lg hover:shadow-purple-500/20 transition-all cursor-pointer hover-lift"
+                >
+                  <div className="text-center">
+                    <div className="text-4xl mb-4">🏆</div>
+                    <h3 className="text-xl font-bold text-purple-400 mb-2">Ranking</h3>
+                    <p className="text-gray-300 text-sm">Compite con otros hechiceros</p>
+                  </div>
+                </motion.div>
+              </motion.div>
 
-            {/* Misiones */}
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => router.push('/misiones')}
-              className="glass-dark p-6 rounded-xl border border-purple-600 shadow-jjk-lg hover:shadow-purple-500/20 transition-all cursor-pointer hover-lift"
-            >
-              <div className="text-center">
-                <div className="text-4xl mb-4">⚔️</div>
-                <h3 className="text-xl font-bold text-purple-400 mb-2">Misiones</h3>
-                <p className="text-gray-300 text-sm">
-                  Completa misiones para ganar experiencia
-                </p>
-              </div>
-            </motion.div>
+              {/* Accesorios equipados reales */}
+              <motion.div className="glass-dark p-6 rounded-xl border border-green-500 shadow-jjk-lg mb-8">
+                <h3 className="text-2xl font-bold text-green-400 mb-2">🧩 Accesorios Equipados</h3>
+                {user.accesoriosComprados && user.accesoriosComprados.length > 0 ? (
+                  <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {user.accesoriosComprados.map((acc, idx) => (
+                      <li key={idx} className="bg-black/40 rounded-lg p-4 border border-green-700">
+                        <div className="font-bold text-yellow-300">{acc}</div>
+                        <div className="text-gray-300 text-sm">Accesorio equipado</div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="text-gray-400">No tienes accesorios equipados aún.</div>
+                )}
+              </motion.div>
 
-            {/* Unirse a Clase */}
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => router.push('/perfil/estudiante/unirse-clase')}
-              className="glass-dark p-6 rounded-xl border border-purple-600 shadow-jjk-lg hover:shadow-purple-500/20 transition-all cursor-pointer hover-lift"
-            >
-              <div className="text-center">
-                <div className="text-4xl mb-4">🏫</div>
-                <h3 className="text-xl font-bold text-purple-400 mb-2">Unirse a Clase</h3>
-                <p className="text-gray-300 text-sm">
-                  Únete a una clase con código
-                </p>
-              </div>
-            </motion.div>
-          </motion.div>
+              {/* Logros (placeholder motivacional) */}
+              <motion.div className="glass-dark p-6 rounded-xl border border-yellow-400 shadow-jjk-lg mb-8">
+                <h3 className="text-2xl font-bold text-yellow-400 mb-2">🏅 Logros</h3>
+                <div className="text-gray-300">¡Participa en misiones y actividades para desbloquear logros épicos!</div>
+              </motion.div>
+
+              {/* Estadísticas adicionales (simulado) */}
+              <motion.div className="glass-dark p-6 rounded-xl border border-pink-400 shadow-jjk-lg mb-8">
+                <h3 className="text-2xl font-bold text-pink-400 mb-2">📊 Estadísticas</h3>
+                <div className="text-gray-300">Nivel: <span className="text-white font-bold">{user.nivel}</span> | Experiencia: <span className="text-white font-bold">{user.experiencia} XP</span> | Monedas: <span className="text-white font-bold">{user.monedas}</span></div>
+              </motion.div>
+
+              {/* Misiones completadas/pendientes (reales) */}
+              <motion.div className="glass-dark p-6 rounded-xl border border-purple-400 shadow-jjk-lg mb-8">
+                <h3 className="text-2xl font-bold text-purple-400 mb-2">📜 Misiones Completadas</h3>
+                {user.misionesCompletadas && user.misionesCompletadas.length > 0 ? (
+                  <ul className="space-y-2">
+                    {user.misionesCompletadas.map(m => (
+                      <li key={m._id} className="bg-black/40 rounded-lg p-4 border border-purple-700">
+                        <div className="font-bold text-green-300">{m.titulo}</div>
+                        <div className="text-gray-300 text-sm">{m.descripcion}</div>
+                        <div className="text-xs text-yellow-400">+{m.experiencia} XP</div>
+                        <div className="text-xs text-blue-300">Dificultad: {m.dificultad}</div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="text-gray-400">Aún no has completado misiones. ¡Participa en tu clase para ganar experiencia!</div>
+                )}
+              </motion.div>
+            </>
+          ) : (
+            <>
+              {/* Acciones rápidas y mensaje motivacional si falta clase o personaje */}
+              <motion.div
+                initial={{ y: 30, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.6 }}
+                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12"
+              >
+                {/* FLUJO LÓGICO: Solo mostrar la acción que corresponde */}
+                {(!user?.clase || !user?.clase._id) && (
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => router.push('/perfil/estudiante/unirse-clase')}
+                    className="glass-dark p-6 rounded-xl border border-purple-600 shadow-jjk-lg hover:shadow-purple-500/20 transition-all cursor-pointer hover-lift col-span-4"
+                  >
+                    <div className="text-center">
+                      <div className="text-4xl mb-4">🏫</div>
+                      <h3 className="text-xl font-bold text-purple-400 mb-2">Unirse a Clase</h3>
+                      <p className="text-gray-300 text-sm">
+                        Únete a una clase con código para comenzar tu aventura
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+                {user?.clase && user?.clase._id && !user?.personaje && (
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => router.push('/escoger-personaje')}
+                    className="glass-dark p-6 rounded-xl border border-purple-600 shadow-jjk-lg hover:shadow-purple-500/20 transition-all cursor-pointer hover-lift col-span-4"
+                  >
+                    <div className="text-center">
+                      <div className="text-4xl mb-4">🎭</div>
+                      <h3 className="text-xl font-bold text-purple-400 mb-2">Seleccionar Personaje</h3>
+                      <p className="text-gray-300 text-sm">
+                        Elige tu personaje antes de entrar al lobby
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+              </motion.div>
+              <motion.div className="glass-dark p-6 rounded-xl border border-pink-400 shadow-jjk-lg mb-8 text-center">
+                <h3 className="text-2xl font-bold text-pink-400 mb-2">¡Completa tu perfil!</h3>
+                <div className="text-gray-300">Únete a una clase y selecciona tu personaje para desbloquear todas las funciones y estadísticas de tu perfil.</div>
+              </motion.div>
+            </>
+          )}
         </div>
       </div>
     </div>

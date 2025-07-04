@@ -60,7 +60,13 @@ export default function UnirseClase() {
           } catch (error) {}
         }
         if (data && data.claseId) {
-          setTimeout(() => router.push(`/clases/lobby?classId=${data.claseId}`), 2000)
+          setTimeout(async () => {
+            const token = localStorage.getItem('token');
+            await fetch(`/api/usuarios/${data.usuarioId || ''}`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            router.push('/escoger-personaje');
+          }, 2000);
         } else {
           setTimeout(() => router.push('/escoger-personaje'), 2000)
         }
