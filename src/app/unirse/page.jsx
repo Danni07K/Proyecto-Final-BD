@@ -68,23 +68,31 @@ export default function UnirseClase() {
       
       if (res.ok) {
         setMensaje({ tipo: 'success', texto: data.message })
-        toast.success('¡Te has unido exitosamente a la clase!')
-        
+        toast.custom((t) => (
+          <div className="bg-black/90 border-2 border-green-500 text-center px-6 py-4 rounded-xl shadow-2xl animate-pulse-glow">
+            <div className="text-5xl mb-2">🎉</div>
+            <div className="text-lg font-bold text-green-400 mb-1">¡Unido a la clase!</div>
+            <div className="text-purple-300">Has ingresado al dominio del profesor.<br/>Prepárate para la energía maldita.</div>
+          </div>
+        ))
         // Efecto de sonido
         if (audioEnabled) {
           try {
             const audio = new Audio('/sounds/energia-maldita.mp3')
-            audio.volume = 0.3
+            audio.volume = 0.5
             audio.play().catch(() => {})
-          } catch (error) {
-            console.log('Audio no disponible')
-          }
+          } catch (error) {}
         }
-        
-        setTimeout(() => router.push('/perfil'), 2000)
+        setTimeout(() => router.push('/perfil/estudiante'), 2000)
       } else {
         setMensaje({ tipo: 'error', texto: data.error })
-        toast.error(data.error)
+        toast.custom((t) => (
+          <div className="bg-black/90 border-2 border-red-500 text-center px-6 py-4 rounded-xl shadow-2xl animate-pulse-glow">
+            <div className="text-5xl mb-2">👹</div>
+            <div className="text-lg font-bold text-yellow-400 mb-1">Código inválido</div>
+            <div className="text-purple-300">No se encontró ninguna clase con ese código.<br/>Verifica con tu profesor.</div>
+          </div>
+        ))
       }
     } catch (error) {
       setMensaje({ tipo: 'error', texto: 'Error de conexión. Verifica tu conexión a internet.' })

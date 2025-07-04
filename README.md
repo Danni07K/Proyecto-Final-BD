@@ -178,3 +178,87 @@ Este proyecto está bajo la Licencia MIT.
 ---
 
 **¡Domina las técnicas de Jujutsu Kaisen en esta experiencia 3D inmersiva!** 🎮✨
+
+**supabase --> jujutsu-kaisen-chat**
+**organización: DanielKea**
+**password: Samsung_A51SWAQ**
+
+# Classcraft App - Plataforma Educativa Gamificada (Jujutsu Kaisen)
+
+¡Bienvenido a la plataforma educativa gamificada inspirada en Jujutsu Kaisen! Este sistema permite a profesores y estudiantes interactuar en un entorno épico, con selección de personajes 3D, chat en tiempo real, tienda de accesorios, sistema de clases, calificaciones y mucho más.
+
+---
+
+## 🚀 **Flujo de Usuario**
+
+### **Estudiante**
+1. Se une a la clase con un código único.
+2. Selecciona su personaje 3D (con animaciones y efectos visuales).
+3. Ingresa al **lobby de la clase**:
+   - Ve a los estudiantes conectados (con badge animado y efectos visuales).
+   - Puede chatear en tiempo real (texto y emojis, con efectos de sonido).
+   - Ve el historial de todos los estudiantes de la clase (aunque no estén conectados).
+   - Recibe feedback visual y sonoro al entrar/salir usuarios y al enviar mensajes.
+   - Si se pierde la conexión, ve un mensaje claro y el sistema intenta reconectar automáticamente.
+
+### **Profesor**
+- Puede ver en tiempo real quién está conectado y el historial de la clase.
+- Puede interactuar en el chat y usar la presencia para dinámicas de clase.
+
+---
+
+## 🛠️ **Tecnologías Usadas**
+- **Next.js** (SSR, API routes, frontend React)
+- **MongoDB** (persistencia de usuarios, clases y chat)
+- **socket.io** (chat y presencia en tiempo real)
+- **Framer Motion, Tailwind, react-hot-toast, use-sound** (animaciones, estilos y feedback visual/sonoro)
+- **Custom server** para unificar todo en un solo proceso y puerto
+
+---
+
+## ⚡ **Comandos de Desarrollo y Producción**
+
+### **Desarrollo**
+```bash
+npm run custom-dev
+```
+
+### **Producción**
+```bash
+npm run build
+npm run custom-start
+```
+
+- El servidor escucha en el puerto `3005` por defecto (puedes cambiarlo con la variable de entorno `PORT`).
+- Asegúrate de tener tu `MONGODB_URI` en `.env.local` o `.env.production`.
+
+---
+
+## 📁 **Archivos y Recursos**
+- Los sonidos y avatares deben estar en la carpeta `public/`.
+- El custom server está en `server.js`.
+- El lobby y chat en tiempo real están en `src/app/clases/lobby.jsx`.
+- El endpoint de API para el lobby está en `src/app/api/clases/lobby/route.js`.
+
+---
+
+## 🌐 **Recomendaciones para Despliegue**
+- Para producción, usa un VPS, EC2, Heroku, Railway, Render, etc., que soporte custom servers Node.js.
+- Si usas Vercel, asegúrate de que tu plan y configuración permitan custom servers (o usa un backend separado para socket.io).
+
+---
+
+## 🎨 **Experiencia de Usuario**
+- Estilo visual y animaciones inspiradas en Jujutsu Kaisen.
+- Feedback visual y sonoro en cada acción importante.
+- Experiencia ultra profesional, fluida y lógica, similar a plataformas como Kahoot pero con un toque único.
+
+---
+
+## 📝 **Notas Finales**
+- El sistema es 100% reversible: cualquier cambio puede ser revertido si se detecta un error.
+- El código está optimizado para robustez, escalabilidad y presentación profesional.
+
+---
+
+¡Disfruta la experiencia y demuestra tu poder como hechicero en el aula! 🧙‍♂️✨

@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'react-hot-toast'
+import { useRouter } from 'next/navigation'
 
 export default function ClasesPage() {
   const [clases, setClases] = useState([])
@@ -10,6 +11,7 @@ export default function ClasesPage() {
   const [showForm, setShowForm] = useState(false)
   const [particles, setParticles] = useState([])
   const [audioEnabled, setAudioEnabled] = useState(false)
+  const router = useRouter()
 
   // Generate cursed energy particles
   useEffect(() => {
@@ -98,6 +100,10 @@ export default function ClasesPage() {
         } catch (error) {
           console.log('Audio no disponible')
         }
+      }
+      // Redirigir al lobby con el ID real de la clase
+      if (claseAgregada && claseAgregada._id) {
+        router.push(`/clases/lobby?classId=${claseAgregada._id}`)
       }
     } catch (error) {
       toast.error('❌ Error al crear clase', { id: toastId })
@@ -383,3 +389,5 @@ export default function ClasesPage() {
     </div>
   )
 }
+
+export { default as LobbyClase } from './lobby.jsx';

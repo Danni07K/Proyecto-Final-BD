@@ -45,7 +45,7 @@ export default function EscogerPersonaje() {
 
       if (response.ok) {
         toast.success(`¡Has elegido a ${selectedCharacter.name}!`)
-        router.push('/perfil/estudiante')
+        router.push('/clase/lobby')
       } else {
         const error = await response.json()
         toast.error(error.error || 'Error al seleccionar personaje')

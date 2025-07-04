@@ -104,8 +104,19 @@ export default function AleatorioPage() {
 
         toast.success(`¡${data.estudiante.nombre} ha sido seleccionado!`)
       } else {
-        toast.error(data.error)
-        setEfecto('')
+        if (data.error === 'No hay estudiantes en la clase para seleccionar.') {
+          setEstudianteSeleccionado(null)
+          setEfecto('')
+          toast.custom((t) => (
+            <div className="bg-black/90 border-2 border-purple-700 text-center px-6 py-4 rounded-xl shadow-2xl animate-pulse-glow">
+              <div className="text-5xl mb-2">👹</div>
+              <div className="text-lg font-bold text-yellow-400 mb-1">¡Clase Vacía!</div>
+              <div className="text-purple-300">No hay estudiantes en la clase para invocar con energía maldita.<br/>Agrega estudiantes primero.</div>
+            </div>
+          ))
+        } else {
+          toast.error(data.error || 'Error al seleccionar estudiante')
+        }
       }
     } catch (error) {
       toast.error('Error al seleccionar estudiante')
